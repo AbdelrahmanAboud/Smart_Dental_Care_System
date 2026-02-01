@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smart_dental_care_system/pages/patient-record.dart';
 
 import 'login.dart';
 
@@ -251,11 +252,17 @@ class _RegisterState extends State<Register> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                         Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
+                    PatientRecord()
+                
+                )
+                );
+                    },
                     child: Text(
 
                       "Signup ",
-                      style: TextStyle(color: Colors.black, fontSize: 25),
+                      style: TextStyle(color: Colors.black, fontSize: 20),
                     ),
 
 
