@@ -24,6 +24,9 @@ class _PatientRrecordState extends State<PatientRecord> {
       
       appBar: AppBar(
         backgroundColor: bgColor,
+        title: Text(
+              "Medical Record",
+              style: TextStyle(color: Colors.white, fontSize: 20),),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () {
@@ -32,15 +35,9 @@ class _PatientRrecordState extends State<PatientRecord> {
             ).push(MaterialPageRoute(builder: (context) => Register()));
           },
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: Text(
-              "Medical Record",
-              style: TextStyle(color: Colors.white, fontSize: 20),
-            ),
-          ),
-        ],
+      
+        
+      
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +106,6 @@ class _PatientRrecordState extends State<PatientRecord> {
               itemBuilder: (context, index) {
                 final record = dentalRecords[index];
                 return Center(
-                  // لضمان بقاء الكارد في المنتصف إذا كان عرض الشاشة أكبر من 350
                   child: SizedBox(width: 350, child: RecordCard(record, context)),
                 );
               },

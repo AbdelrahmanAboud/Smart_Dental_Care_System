@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smart_dental_care_system/pages/navigation_bar.dart';
 import 'package:smart_dental_care_system/pages/patient-record.dart';
+import 'package:smart_dental_care_system/pages/patient_home.dart';
 
 import 'login.dart';
 
@@ -13,9 +15,9 @@ class _RegisterState extends State<Register> {
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
+  String selectedRole = "Patient";
   bool isPasswordObscure = true;
   bool isConfirmPasswordObscure = true;
-  String? selectedRole;
   String? selectedBloodType;
 
   @override
@@ -25,33 +27,30 @@ class _RegisterState extends State<Register> {
 
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(top: 20,bottom: 20),
+          padding: const EdgeInsets.only(top: 20, bottom: 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 50),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Color(0xFF2EC4FF),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              FontAwesomeIcons.stethoscope,
-              size: 48,
-              color: Colors.black,
-            ),
-          ),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Color(0xFF2EC4FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  FontAwesomeIcons.stethoscope,
+                  size: 48,
+                  color: Colors.black,
+                ),
+              ),
 
               const SizedBox(height: 20),
 
               const Text(
                 "Choose your role",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 20),
               ),
 
               const SizedBox(height: 20),
@@ -74,10 +73,9 @@ class _RegisterState extends State<Register> {
               SizedBox(height: 8),
               Padding(
                 padding: EdgeInsets.only(left: 12.0, right: 12.0),
-                child:  TextFormField(
+                child: TextFormField(
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
-
                     hintText: "Full name...",
                     labelText: "Full Name",
                     labelStyle: TextStyle(color: Colors.grey, fontSize: 16),
@@ -104,16 +102,16 @@ class _RegisterState extends State<Register> {
                     hintText: "Enter your age...",
                     labelText: "Age",
                     labelStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(
-                      Icons.cake,
-                      color: Colors.grey,
-                    ),
+                    prefixIcon: const Icon(Icons.cake, color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20.0),
-                      borderSide: const BorderSide(color: Colors.white, width: 2),
+                      borderSide: const BorderSide(
+                        color: Colors.white,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -133,27 +131,26 @@ class _RegisterState extends State<Register> {
               ),
 
               SizedBox(height: 15),
-          Padding(
-            padding: EdgeInsets.only(left: 12.0, right: 12.0),
-             child:  TextFormField(
-                style: TextStyle(color: Colors.white, fontSize: 16),
-                decoration: InputDecoration(
+              Padding(
+                padding: EdgeInsets.only(left: 12.0, right: 12.0),
+                child: TextFormField(
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: "Enter your email...",
+                    labelText: "Email",
+                    labelStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                    prefixIcon: Icon(Icons.email, color: Colors.grey),
 
-                  hintText: "Enter your email...",
-                  labelText: "Email",
-                  labelStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                  prefixIcon: Icon(Icons.email, color: Colors.grey),
-
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20.0),
-                    borderSide: BorderSide(color: Colors.white, width: 4),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                      borderSide: BorderSide(color: Colors.white, width: 4),
+                    ),
                   ),
                 ),
               ),
-          ),
               SizedBox(height: 15),
               Padding(
                 padding: const EdgeInsets.only(left: 12.0, right: 12.0),
@@ -162,7 +159,7 @@ class _RegisterState extends State<Register> {
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
                     hintText: "Enter your password...",
-                     labelText: "Password",
+                    labelText: "Password",
 
                     labelStyle: TextStyle(
                       color: Color.fromARGB(255, 107, 105, 105),
@@ -180,7 +177,9 @@ class _RegisterState extends State<Register> {
                         });
                       },
                       icon: Icon(
-                        isPasswordObscure ? Icons.visibility : Icons.visibility_off,
+                        isPasswordObscure
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: const Color(0xFFA0AAB8),
                       ),
                     ),
@@ -220,7 +219,9 @@ class _RegisterState extends State<Register> {
                         });
                       },
                       icon: Icon(
-                        isConfirmPasswordObscure ? Icons.visibility : Icons.visibility_off,
+                        isConfirmPasswordObscure
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: const Color(0xFFA0AAB8),
                       ),
                     ),
@@ -236,9 +237,7 @@ class _RegisterState extends State<Register> {
               ),
               SizedBox(height: 15),
 
-
-
-          Padding(
+              Padding(
                 padding: const EdgeInsets.only(left: 16.0, right: 16),
                 child: Container(
                   width: 350,
@@ -253,19 +252,16 @@ class _RegisterState extends State<Register> {
                       ),
                     ),
                     onPressed: () {
-                         Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    PatientRecord()
-                
-                )
-                );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => NavigitionBar(),
+                        ),
+                      );
                     },
                     child: Text(
-
                       "Signup ",
                       style: TextStyle(color: Colors.black, fontSize: 20),
                     ),
-
-
                   ),
                 ),
               ),
@@ -316,12 +312,10 @@ class _RegisterState extends State<Register> {
                               ),
                             ),
                           ),
-                          onPressed: () {
-
-                          },
+                          onPressed: () {},
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children:  [
+                            children: [
                               Icon(
                                 FontAwesomeIcons.chrome,
                                 size: 16,
@@ -447,63 +441,60 @@ class _RegisterState extends State<Register> {
                   ),
                 ],
               ),
-
             ],
           ),
         ),
       ),
     );
   }
+
   Widget roleCard(String role, IconData icon) {
     bool isSelected = selectedRole == role;
     return GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedRole=role;
-          });
-        },
-        child: Padding(
-          padding: EdgeInsets.all(10),
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? cardColor
-                  : Color(0xFF141C2F),
-              borderRadius: BorderRadius.circular(14),
-              border: isSelected
-                  ? Border.all(width: 1, color: primaryBlue)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withOpacity(0.4),
-                  blurRadius: 15,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 28,
-              color: isSelected ? primaryBlue : Colors.white70,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              role,
-              style: TextStyle(
-                color: isSelected ? primaryBlue : Colors.white,
-                fontSize: 14,
+      onTap: () {
+        setState(() {
+          selectedRole = role;
+        });
+      },
+      child: Padding(
+        padding: EdgeInsets.all(10),
+        child: Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: isSelected ? cardColor : Color(0xFF141C2F),
+            borderRadius: BorderRadius.circular(14),
+            border: isSelected
+                ? Border.all(width: 1, color: primaryBlue)
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: primaryBlue.withOpacity(0.4),
+                blurRadius: 15,
+                spreadRadius: 1,
               ),
-
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 28,
+                color: isSelected ? primaryBlue : Colors.white70,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                role,
+                style: TextStyle(
+                  color: isSelected ? primaryBlue : Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-        ),
     );
   }
 }

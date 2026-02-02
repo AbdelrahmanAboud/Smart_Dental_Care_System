@@ -20,7 +20,8 @@ final List<MedicalFile> medicalfile = [
   MedicalFile(
     fileName: "Full Mouth X-Ray 2023.pdf",
     date: "Oct 26, 2023",
-    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    fileUrl:
+        "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     icon: Icons.image_outlined,
     iconColor: Colors.cyanAccent,
   ),
@@ -34,7 +35,8 @@ final List<MedicalFile> medicalfile = [
   MedicalFile(
     fileName: "Upper Molar Filling.jpg",
     date: "Aug 15, 2023",
-    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    fileUrl:
+        "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     icon: Icons.image_outlined,
     iconColor: Colors.cyanAccent,
   ),
@@ -46,5 +48,3 @@ final List<MedicalFile> medicalfile = [
     iconColor: Colors.cyan,
   ),
 ];
-
-
