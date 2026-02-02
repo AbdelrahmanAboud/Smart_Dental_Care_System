@@ -315,7 +315,7 @@ class _LoginState extends State<Login> {
                     },
                     child: Text(
                       "Login ",
-                      style: TextStyle(color: Colors.black, fontSize: 18),
+                      style: TextStyle(color: Colors.black, fontSize: 20),
                     ),
                   ),
                 ),
