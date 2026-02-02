@@ -12,7 +12,7 @@ class ServiceItem {
 class FinancialRecord {
   final String title;
   final String date;
-  final List<ServiceItem> items; // شيلنا الـ subTitle والـ amount القدام
+  final List<ServiceItem> items; 
   final IconData icon;
   final Color iconColor;
   final bool isInvoice;
