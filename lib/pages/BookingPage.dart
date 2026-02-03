@@ -181,79 +181,84 @@ class _BookingpageState extends State<Bookingpage> {
                         ),
                       )
                     else
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Center(
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: todaySlots.map((slot) {
-                                final isSelected = slot == selectedSlot;
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedSlot = slot;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 14,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? primaryBlue
-                                          : cardColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      slot,
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                         Expanded(
+                           child: SingleChildScrollView(
+                              child: Center(
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: todaySlots.map((slot) {
+                                    final isSelected = slot == selectedSlot;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedSlot = slot;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 10,
+                                          horizontal: 14,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? primaryBlue
+                                              : cardColor,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          slot,
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
+                         ),
+                      
+                      
                   ],
                 ),
               ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (selectedSlot != null) {
-                    showBookingDialog(context, selectedSlot!, selectedDay!);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Please select a time slot first!"),
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  elevation: selectedSlot != null ? 4 : 2,
-                  shadowColor: selectedSlot != null
-                      ? primaryBlue.withOpacity(0.3)
-                      : Color.fromARGB(255, 26, 64, 97).withOpacity(0.2),
-                  backgroundColor: selectedSlot != null
-                      ? primaryBlue
-                      : Color(0xFF0D2A44),
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                ),
 
-                child: Text(
-                  "Confirm Booking",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ),
-            ),
+            
           ],
         ),
       ),
+      bottomNavigationBar: Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () {
+          if (selectedSlot != null) {
+            showBookingDialog(context, selectedSlot!, selectedDay!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Please select a time slot first!")),
+            );
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          elevation: selectedSlot != null ? 8 : 0,
+          shadowColor: primaryBlue.withOpacity(0.4),
+          backgroundColor: selectedSlot != null ? primaryBlue : const Color(0xFF162A3D),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        child: Text(
+          "Confirm Booking",
+          style: TextStyle(
+            color: selectedSlot != null ? Colors.white : Colors.white38,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ),
+  ),
     );
   }
 }
@@ -387,5 +392,6 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
         ),
       );
     },
+    
   );
 }

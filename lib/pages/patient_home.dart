@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/pages/BookingPage.dart';
+import 'package:smart_dental_care_system/pages/pateint_profile.dart';
+import 'package:smart_dental_care_system/pages/patient-record.dart';
 
 class PatientHome extends StatefulWidget {
   @override
@@ -13,11 +15,11 @@ class _PatientHomeState extends State<PatientHome> {
   final Color primaryBlue = const Color(0xFF2EC4FF);
 
   final List<Map<String, dynamic>> quickAccessItems = [
-    {"icon": Icons.calendar_today_outlined, "title": "Book"},
-    {"icon": Icons.description_outlined, "title": "Records"},
-    {"icon": Icons.lightbulb_outline, "title": "Care Tips"},
-    {"icon": Icons.security_outlined, "title": "Risk Score"},
-    {"icon": Icons.directions_walk_outlined, "title": "Habit Tracker "},
+    {"icon": FontAwesomeIcons.book, "title": "Book"},
+    {"icon": FontAwesomeIcons.clipboardList, "title": "Records"},
+    {"icon": FontAwesomeIcons.lightbulb, "title": "Care Tips"},
+    {"icon": FontAwesomeIcons.chartLine, "title": "Risk Score"},
+    {"icon": FontAwesomeIcons.chartBar, "title": "Habit Tracker "},
   ];
 
   @override
@@ -28,22 +30,19 @@ class _PatientHomeState extends State<PatientHome> {
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
-        ),
-        title: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: const Text(
-            "Patient Dashboard",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        centerTitle: true,
+        // automaticallyImplyLeading: false,
+       
+        // title:
+        //    Text(
+        //     "Patient Home",
+        //     style: TextStyle(
+        //       color: Colors.white,
+        //       fontSize: 20,
+        //       fontWeight: FontWeight.w600,
+        //     ),
+        //   ),
+        
+        // centerTitle: false,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 13.0),
@@ -59,7 +58,9 @@ class _PatientHomeState extends State<PatientHome> {
               iconSize: 28,
               icon: Icon(Icons.person, color: Colors.white),
               onPressed: () {
-                // notifications
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => PateintProfile()),
+                );
               },
             ),
           ),
@@ -78,13 +79,22 @@ class _PatientHomeState extends State<PatientHome> {
             ),
             const SizedBox(height: 5),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(10.0),
               child: Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
 
                 child: Padding(
@@ -116,10 +126,13 @@ class _PatientHomeState extends State<PatientHome> {
                             style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
                           const Spacer(),
-                          Icon(
-                            FontAwesomeIcons.clock,
-                            color: primaryBlue,
-                            size: 15,
+                          Padding(
+                            padding: const EdgeInsets.only(right: 20.0),
+                            child: Icon(
+                              FontAwesomeIcons.clock,
+                              color: primaryBlue,
+                              size: 20,
+                            ),
                           ),
                         ],
                       ),
@@ -210,25 +223,36 @@ class _PatientHomeState extends State<PatientHome> {
               padding: const EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
-                height: 50,
-
+                height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    shadowColor: Color(0xFF2EC4FF),
-                    elevation: 15,
-                    backgroundColor: Color(0xFF00AEEF),
+                    backgroundColor: const Color(
+                      0xFF00D2FF,
+                    ), 
+                    foregroundColor:
+                        Colors.black, 
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
+                    elevation: 5,
                   ),
                   onPressed: () {},
-                  child: Text(
-                    "Scan my Teeth ",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.fullscreen_rounded,
+                        size: 24,
+                      ), 
+                      SizedBox(width: 10),
+                      Text(
+                        "Scan My Teeth",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -240,25 +264,39 @@ class _PatientHomeState extends State<PatientHome> {
               padding: const EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
-                height: 50,
-
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shadowColor: Color(0xFF2ED573),
-                    elevation: 15,
-                    backgroundColor: Color(0xFF2ED573),
+                height: 55,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: const Color(
+                      0xFF112B3C,
+                    ), 
+                    side: const BorderSide(
+                      color: Color(0xFF00D2FF),
+                      width: 1,
+                    ), 
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                   onPressed: () {},
-                  child: Text(
-                    "Smile Future Simulator ",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.auto_awesome_outlined,
+                        color: Color(0xFF00D2FF),
+                        size: 22,
+                      ), 
+                      SizedBox(width: 10),
+                      Text(
+                        "Smile Future Simulator",
+                        style: TextStyle(
+                          color: Color(0xFF00D2FF),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -269,25 +307,35 @@ class _PatientHomeState extends State<PatientHome> {
               padding: const EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
-                height: 50,
-
+                height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    shadowColor: Color(0xFFE74C3C),
-                    elevation: 15,
-                    backgroundColor: Color(0xFFE74C3C),
+                    backgroundColor: const Color(
+                      0xFFFF4B5C,
+                    ), 
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
+                    elevation: 5,
                   ),
                   onPressed: () {},
-                  child: Text(
-                    "Emergency",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 24,
+                      ), 
+                      SizedBox(width: 10),
+                      Text(
+                        "Emergency",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -311,23 +359,23 @@ class _PatientHomeState extends State<PatientHome> {
             ),
 
             Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16),
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: GridView.builder(
-                shrinkWrap: true, // مهم جدًا
-                physics: const NeverScrollableScrollPhysics(), // مهم
-                itemCount: 5, // عدد الكروت
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // كل اتنين جنب بعض
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 5,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 1.1, // شكل الكارد
+                  childAspectRatio: 1.1,
                 ),
                 itemBuilder: (context, index) {
                   final item = quickAccessItems[index];
                   return _quickAccessCard(
                     icon: item["icon"],
                     title: item["title"],
-                    index: index, // <--- لازم تبعت الـ index
+                    index: index,
                   );
                 },
               ),
@@ -347,6 +395,15 @@ class _PatientHomeState extends State<PatientHome> {
       decoration: BoxDecoration(
         color: const Color(0xFF112B3C),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -359,6 +416,10 @@ class _PatientHomeState extends State<PatientHome> {
               );
               break;
             case 1:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => PatientRecord()),
+              );
               break;
             case 2:
               break;
