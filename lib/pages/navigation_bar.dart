@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_dental_care_system/pages/pateint_profile.dart';
 import 'package:smart_dental_care_system/pages/patient-record.dart';
 import 'package:smart_dental_care_system/pages/patient_home.dart';
 
@@ -25,6 +26,7 @@ class _NavigitionBarState extends State<NavigitionBar> {
       // RemindersPage(),
       // TipsPage(),
       // ChatPage(),
+     
     ];
   }
 

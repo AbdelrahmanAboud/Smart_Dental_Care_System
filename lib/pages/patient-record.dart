@@ -126,7 +126,7 @@ class _PatientRrecordState extends State<PatientRecord> {
               itemBuilder: (context, index) {
                 final file = medicalfile[index];
                 return Center(
-                  // لضمان بقاء الكارد في المنتصف إذا كان عرض الشاشة أكبر من 350
+                 
                   child: SizedBox(width: 350, child: AttachmentCard(file)),
                 );
               },
@@ -143,7 +143,6 @@ Widget RecordCard(DentalRecord record, BuildContext context) {
     padding: EdgeInsets.only(left: 20.0, right: 20),
     child: GestureDetector(
      onTap: () {
-        // الانتقال لصفحة التفاصيل وتمرير التاريخ
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -272,10 +271,7 @@ Widget AttachmentCard(MedicalFile file) {
             IconButton(
              onPressed: () async {
     final Uri url = Uri.parse(file.fileUrl);
-    
-    // محاولة فتح الرابط
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-       // لو الرابط فيه مشكلة، هيطبع لك في الكونسول
+        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
        debugPrint("Could not launch $url");
     }
   },
