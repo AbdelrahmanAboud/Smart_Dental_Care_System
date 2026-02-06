@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// موديل الخدمات الفرعية داخل كل فاتورة
 class ServiceItem {
   final String name;
   final double price;
@@ -8,7 +7,6 @@ class ServiceItem {
   ServiceItem({required this.name, required this.price});
 }
 
-// الموديل الأساسي للسجلات المالية
 class FinancialRecord {
   final String title;
   final String date;
@@ -20,7 +18,7 @@ class FinancialRecord {
   FinancialRecord({
     required this.title,
     required this.date,
-    this.items = const [], // ضفنا قيمة افتراضية عشان نمنع الـ Null Error
+    this.items = const [], 
     required this.icon,
     required this.iconColor,
     this.isInvoice = true,
@@ -30,7 +28,7 @@ class FinancialRecord {
 }
 
 final List<FinancialRecord> financialrecord = [
-  // موعد Oct 26, 2023
+  //  Oct 26, 2023
   FinancialRecord(
     title: "Invoice",
     date: "Oct 26, 2023",
@@ -45,7 +43,7 @@ final List<FinancialRecord> financialrecord = [
       ServiceItem(name: "Consultation Fee", price: 45.0),
     ],
   ),
-  // موعد Sep 14, 2023
+  //  Sep 14, 2023
   FinancialRecord(
     title: "Invoice",
     date: "Sep 14, 2023",
@@ -55,7 +53,7 @@ final List<FinancialRecord> financialrecord = [
       ServiceItem(name: "Professional Cleaning", price: 120.0),
     ],
   ),
-  // موعد Aug 02, 2023
+  //  Aug 02, 2023
   FinancialRecord(
     title: "Invoice",
     date: "Aug 02, 2023",
@@ -66,7 +64,7 @@ final List<FinancialRecord> financialrecord = [
       ServiceItem(name: "Dental X-Ray", price: 30.0),
     ],
   ),
-  // موعد Jul 18, 2023 (Treatment Plan)
+  //  Jul 18, 2023 (Treatment Plan)
   FinancialRecord(
     title: "Treatment Plan",
     date: "Jul 18, 2023",
@@ -82,7 +80,7 @@ final List<FinancialRecord> financialrecord = [
       ServiceItem(name: "Root Canal Therapy", price: 500.0),
     ],
   ),
-  // موعد Jun 05, 2023
+  //  Jun 05, 2023
   FinancialRecord(
     title: "Invoice",
     date: "Jun 05, 2023",

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:smart_dental_care_system/data/AvailableDay.dart';
-import 'package:smart_dental_care_system/pages/patient-record.dart';
+import 'package:smart_dental_care_system/data/PateintModels/AvailableDay.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
@@ -46,7 +45,7 @@ class _BookingpageState extends State<Bookingpage> {
           onPressed: () {
             Navigator.of(
               context,
-            ).push(MaterialPageRoute(builder: (context) => PatientRecord()));
+            ).pop();
           },
         ),
       ),
@@ -132,6 +131,7 @@ class _BookingpageState extends State<Bookingpage> {
                       selectedSlot = null;
                     });
                   },
+
                   headerVisible: false,
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: false,
@@ -245,7 +245,7 @@ class _BookingpageState extends State<Bookingpage> {
           elevation: selectedSlot != null ? 8 : 0,
           shadowColor: primaryBlue.withOpacity(0.4),
           backgroundColor: selectedSlot != null ? primaryBlue : const Color(0xFF162A3D),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding:  EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
         child: Text(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:smart_dental_care_system/data/Feedbaack_Rating.dart';
+import 'package:smart_dental_care_system/data/PateintModels/Feedbaack_Rating.dart';
 import 'package:smart_dental_care_system/main.dart';
 
 class PatientFeedback extends StatefulWidget {

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:smart_dental_care_system/pages/BookingPage.dart';
-import 'package:smart_dental_care_system/pages/pateint_profile.dart';
-import 'package:smart_dental_care_system/pages/patient-record.dart';
+import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
+import 'package:smart_dental_care_system/Globale.Data.dart';
+import 'package:smart_dental_care_system/pages/pateint/BookingPage.dart';
+import 'package:smart_dental_care_system/pages/pateint/Habit_Tracker.dart';
+import 'package:smart_dental_care_system/pages/pateint/pateint_profile.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
+
 
 class PatientHome extends StatefulWidget {
   @override
@@ -21,6 +25,7 @@ class _PatientHomeState extends State<PatientHome> {
     {"icon": FontAwesomeIcons.chartLine, "title": "Risk Score"},
     {"icon": FontAwesomeIcons.chartBar, "title": "Habit Tracker "},
   ];
+  static int emergencyCount = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,7 @@ class _PatientHomeState extends State<PatientHome> {
         backgroundColor: bgColor,
         elevation: 0,
         // automaticallyImplyLeading: false,
-       
+
         // title:
         //    Text(
         //     "Patient Home",
@@ -41,7 +46,7 @@ class _PatientHomeState extends State<PatientHome> {
         //       fontWeight: FontWeight.w600,
         //     ),
         //   ),
-        
+
         // centerTitle: false,
         actions: [
           Padding(
@@ -49,7 +54,12 @@ class _PatientHomeState extends State<PatientHome> {
             child: IconButton(
               iconSize: 28,
               icon: Icon(Icons.notifications_none, color: Colors.white),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => DoctorDashboard()),
+                );
+              },
             ),
           ),
           Padding(
@@ -226,11 +236,8 @@ class _PatientHomeState extends State<PatientHome> {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFF00D2FF,
-                    ), 
-                    foregroundColor:
-                        Colors.black, 
+                    backgroundColor: const Color(0xFF00D2FF),
+                    foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -240,10 +247,7 @@ class _PatientHomeState extends State<PatientHome> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(
-                        Icons.fullscreen_rounded,
-                        size: 24,
-                      ), 
+                      Icon(Icons.fullscreen_rounded, size: 24),
                       SizedBox(width: 10),
                       Text(
                         "Scan My Teeth",
@@ -267,13 +271,8 @@ class _PatientHomeState extends State<PatientHome> {
                 height: 55,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFF112B3C,
-                    ), 
-                    side: const BorderSide(
-                      color: Color(0xFF00D2FF),
-                      width: 1,
-                    ), 
+                    backgroundColor: const Color(0xFF112B3C),
+                    side: const BorderSide(color: Color(0xFF00D2FF), width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -286,7 +285,7 @@ class _PatientHomeState extends State<PatientHome> {
                         Icons.auto_awesome_outlined,
                         color: Color(0xFF00D2FF),
                         size: 22,
-                      ), 
+                      ),
                       SizedBox(width: 10),
                       Text(
                         "Smile Future Simulator",
@@ -310,27 +309,50 @@ class _PatientHomeState extends State<PatientHome> {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFFFF4B5C,
-                    ), 
+                    backgroundColor: globalIsEmergencySent
+                        ? Colors.grey
+                        : const Color(0xFFFF4B5C),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.withOpacity(0.5),
+                    disabledForegroundColor: Colors.white70,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    elevation: 5,
+                    elevation: globalIsEmergencySent ? 0 : 5,
                   ),
-                  onPressed: () {},
+                  onPressed: globalIsEmergencySent
+                      ? null
+                      : () {
+                          setState(() {
+                            globalEmergencyCount++;
+                            globalIsEmergencySent = true;
+                            globalLastPatientName = "3boud";
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Emergency alert sent to Dr. Amgad!",
+                              ),
+                              backgroundColor: Colors.redAccent,
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(
-                        Icons.error_outline_rounded,
+                        globalIsEmergencySent
+                            ? Icons.check_circle
+                            : Icons.error_outline_rounded,
                         size: 24,
-                      ), 
-                      SizedBox(width: 10),
+                      ),
+                      const SizedBox(width: 10),
                       Text(
-                        "Emergency",
-                        style: TextStyle(
+                        globalIsEmergencySent ? "Alert Sent" : "Emergency",
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -346,8 +368,8 @@ class _PatientHomeState extends State<PatientHome> {
               child: Container(
                 width: double.infinity,
                 height: 50,
-
-                child: Text(
+                alignment: Alignment.centerLeft, 
+                child: const Text(
                   "Quick Access",
                   style: TextStyle(
                     color: Colors.white,
@@ -357,7 +379,6 @@ class _PatientHomeState extends State<PatientHome> {
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: GridView.builder(
@@ -426,6 +447,10 @@ class _PatientHomeState extends State<PatientHome> {
             case 3:
               break;
             case 4:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => HabitTracker()),
+              );
               break;
           }
         },

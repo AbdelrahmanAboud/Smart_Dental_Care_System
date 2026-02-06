@@ -3,7 +3,7 @@ class DentalRecord {
   final String doctorName;
   final String visitType;
   final String notes;
-  final String status; // pending / completed
+  final String status; 
 
   DentalRecord({
     required this.date,

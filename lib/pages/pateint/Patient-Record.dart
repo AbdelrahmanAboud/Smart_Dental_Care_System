@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:smart_dental_care_system/data/DentelRecord.dart';
-import 'package:smart_dental_care_system/data/MedicalFile.dart';
-import 'package:smart_dental_care_system/pages/register.dart';
-import 'package:smart_dental_care_system/pages/visit_details_Page.dart';
+import 'package:smart_dental_care_system/data/PateintModels/DentelRecord.dart';
+import 'package:smart_dental_care_system/data/PateintModels/MedicalFile.dart';
+import 'package:smart_dental_care_system/pages/pateint/visit_details_Page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
@@ -20,8 +19,6 @@ class _PatientRrecordState extends State<PatientRecord> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-
-      
       appBar: AppBar(
         backgroundColor: bgColor,
         title: Text(
@@ -32,13 +29,14 @@ class _PatientRrecordState extends State<PatientRecord> {
           onPressed: () {
             Navigator.of(
               context,
-            ).push(MaterialPageRoute(builder: (context) => Register()));
+            ).pop();
           },
         ),
       
         
       
       ),
+
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
