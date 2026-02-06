@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:smart_dental_care_system/data/FinancialRecord.dart';
+import 'package:smart_dental_care_system/data/PateintModels/FinancialRecord.dart';
 
 class VisitDetailsPage extends StatelessWidget {
   final String visitDate;
@@ -8,7 +8,6 @@ class VisitDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // السطر ده هو اللي بيخلي كل صفحة تعرض الداتا بتاعتها بس
     final filteredRecords = financialrecord.where((f) => f.date == visitDate).toList();
 
     return Scaffold(
@@ -56,7 +55,6 @@ class VisitDetailsPage extends StatelessWidget {
                     ),
                   )
                 : ListView.builder(
-                    // هنا بنستخدم القائمة المفلترة مش القائمة الكبيرة
                     itemCount: filteredRecords.length,
                     itemBuilder: (context, index) {
                       return FinancialCard(filteredRecords[index]);
@@ -102,28 +100,28 @@ Widget FinancialCard(FinancialRecord record) {
                 ? "\$${record.totalAmount.toStringAsFixed(2)}"
                 : "Plan",
             style: TextStyle(
-              color: record.isInvoice ? const Color(0xFF2EC4FF) : Colors.greenAccent,
+              color: record.isInvoice ?  Color(0xFF2EC4FF) : Colors.greenAccent,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.expand_more, color: Colors.grey, size: 18),
+           SizedBox(width: 8),
+           Icon(Icons.expand_more, color: Colors.grey, size: 18),
         ],
       ),
       children: record.items.map((service) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding:  EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 service.name,
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
+                style:  TextStyle(color: Colors.grey, fontSize: 14),
               ),
               Text(
                 "\$${service.price.toStringAsFixed(2)}",
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style:  TextStyle(color: Colors.white, fontSize: 14),
               ),
             ],
           ),

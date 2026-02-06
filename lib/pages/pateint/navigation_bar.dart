@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:smart_dental_care_system/pages/pateint_profile.dart';
-import 'package:smart_dental_care_system/pages/patient-record.dart';
-import 'package:smart_dental_care_system/pages/patient_home.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Reminders.dart';
+
 
 class NavigitionBar extends StatefulWidget {
   @override
@@ -23,7 +24,7 @@ class _NavigitionBarState extends State<NavigitionBar> {
     _pages = [
       PatientHome(),
       PatientRecord(),
-      // RemindersPage(),
+       PatientReminders(),
       // TipsPage(),
       // ChatPage(),
      

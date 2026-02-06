@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:smart_dental_care_system/pages/navigation_bar.dart';
-import 'package:smart_dental_care_system/pages/patient-record.dart';
-import 'package:smart_dental_care_system/pages/patient_home.dart';
+import 'package:smart_dental_care_system/pages/pateint/navigation_bar.dart';
+
 
 import 'login.dart';
 

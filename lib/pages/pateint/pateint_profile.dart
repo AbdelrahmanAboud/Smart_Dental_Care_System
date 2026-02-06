@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:smart_dental_care_system/pages/Family_Mode.dart';
-import 'package:smart_dental_care_system/pages/Patient_Feedback%20.dart';
-import 'package:smart_dental_care_system/pages/patient-record.dart';
+import 'package:smart_dental_care_system/pages/pateint/Family_Mode.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Feedback%20.dart';
+
+ final Color bgColor = const Color(0xFF06101E);
+  final Color cardColor = const Color(0xFF102136);
+  final Color accentBlue = const Color(0xFF00E5FF);
 
 class PateintProfile extends StatefulWidget {
   @override

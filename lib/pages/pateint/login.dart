@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:smart_dental_care_system/pages/register.dart';
+import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
+import 'package:smart_dental_care_system/pages/pateint/Register.dart';
+import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboard.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -9,10 +12,11 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   @override
-  bool patientSelected = true;
+  bool patientSelected = true; 
   bool doctorSelected = false;
   bool receptionistSelected = false;
   bool isObscure = true;
+  int index = 0;
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF0B1C2D),
@@ -55,13 +59,13 @@ class _LoginState extends State<Login> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Patient Card
                   GestureDetector(
                     onTap: () {
                       setState(() {
                         patientSelected = true;
                         doctorSelected = false;
                         receptionistSelected = false;
+                        index =0;
                       });
                     },
                     child: Padding(
@@ -118,6 +122,8 @@ class _LoginState extends State<Login> {
                         patientSelected = false;
                         doctorSelected = true;
                         receptionistSelected = false;
+                                                index =1;
+
                       });
                     },
                     child: Padding(
@@ -174,6 +180,8 @@ class _LoginState extends State<Login> {
                         patientSelected = false;
                         doctorSelected = false;
                         receptionistSelected = true;
+                                                index =2;
+
                       });
                     },
                     child: Padding(
@@ -226,10 +234,10 @@ class _LoginState extends State<Login> {
               ),
               SizedBox(height: 15),
               Divider(
-                color: const Color.fromARGB(255, 13, 12, 12), // لون الخط
-                thickness: 2, // سمك الخط
-                indent: 20, // مسافة البداية من اليسار
-                endIndent: 20, // مسافة النهاية من اليمين
+                color: const Color.fromARGB(255, 13, 12, 12), 
+                thickness: 2,
+                indent: 20, 
+                endIndent: 20, 
               ),
               SizedBox(height: 15),
 
@@ -307,11 +315,36 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                     onPressed: () {
+                      if(index==0){
                          Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    Register()
+                    PatientHome()
                 
                 )
+                
                 );
+                      }
+                      else if(index==1)
+                      {
+                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
+                    DoctorDashboard()
+                
+                )
+                
+                
+                );
+                      }
+                      else if(index==2)
+                      {
+                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
+                    ReceptionistDashboard()
+                
+                )
+                
+                
+                );
+                      }
+
+
                     },
                     child: Text(
                       "Login ",
@@ -368,7 +401,7 @@ class _LoginState extends State<Login> {
                             ),
                           ),
                           onPressed: () {
-
+                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>ReceptionistDashboard()));
                           },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
