@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
 import 'package:smart_dental_care_system/Globale.Data.dart';
 import 'package:smart_dental_care_system/pages/pateint/BookingPage.dart';
 import 'package:smart_dental_care_system/pages/pateint/Habit_Tracker.dart';
+import 'package:smart_dental_care_system/pages/pateint/Risk_Score.dart';
 import 'package:smart_dental_care_system/pages/pateint/pateint_profile.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
-
 
 class PatientHome extends StatefulWidget {
   @override
@@ -21,11 +22,30 @@ class _PatientHomeState extends State<PatientHome> {
   final List<Map<String, dynamic>> quickAccessItems = [
     {"icon": FontAwesomeIcons.book, "title": "Book"},
     {"icon": FontAwesomeIcons.clipboardList, "title": "Records"},
-    {"icon": FontAwesomeIcons.lightbulb, "title": "Care Tips"},
     {"icon": FontAwesomeIcons.chartLine, "title": "Risk Score"},
     {"icon": FontAwesomeIcons.chartBar, "title": "Habit Tracker "},
   ];
-  static int emergencyCount = 0;
+  String appointmentInfo = "No upcoming appointments";
+  bool hasBooking = false;
+
+  void _handleBooking() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => Bookingpage()),
+    );
+
+    if (result != null && result is Map) {
+      setState(() {
+        DateTime selectedDate = result['selectedDate'];
+        String selectedSlot = result['selectedSlot'];
+
+        String formattedDate = DateFormat('EEEE, dd MMM').format(selectedDate);
+
+        appointmentInfo = "$formattedDate at $selectedSlot";
+        hasBooking = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,31 +55,26 @@ class _PatientHomeState extends State<PatientHome> {
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
+        titleSpacing: 0,
+
         // automaticallyImplyLeading: false,
+        title: Text(
+          "Patient Home",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
 
-        // title:
-        //    Text(
-        //     "Patient Home",
-        //     style: TextStyle(
-        //       color: Colors.white,
-        //       fontSize: 20,
-        //       fontWeight: FontWeight.w600,
-        //     ),
-        //   ),
-
-        // centerTitle: false,
+        centerTitle: false,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 13.0),
+            padding: EdgeInsets.only(right: 13.0),
             child: IconButton(
               iconSize: 28,
               icon: Icon(Icons.notifications_none, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => DoctorDashboard()),
-                );
-              },
+              onPressed: () {},
             ),
           ),
           Padding(
@@ -79,15 +94,34 @@ class _PatientHomeState extends State<PatientHome> {
 
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 5),
-            const Divider(
+            SizedBox(height: 5),
+            Divider(
               color: Colors.grey,
               thickness: 1,
               indent: 10,
               endIndent: 10,
             ),
-            const SizedBox(height: 5),
+            SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Text(
+                "Welcome back, Mego! ",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0, bottom: 10),
+              child: Text(
+                "Your smile is our priority today.",
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(10.0),
               child: Container(
@@ -112,8 +146,7 @@ class _PatientHomeState extends State<PatientHome> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 10),
-                      const SizedBox(width: 10),
+                      SizedBox(height: 10),
                       Text(
                         "Upcoming Appointments",
                         style: TextStyle(
@@ -122,113 +155,139 @@ class _PatientHomeState extends State<PatientHome> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_month,
-                            color: Colors.white,
-                            size: 15,
+                      SizedBox(height: 15),
+
+                      if (!hasBooking) ...[
+                        Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                color: Colors.white24,
+                                size: 40,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                "You haven't booked an appointment yet",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _handleBooking(),
+                                child: Text(
+                                  "Book Now",
+                                  style: TextStyle(color: primaryBlue),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            "monday, june 10, 10:00 AM",
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                          const Spacer(),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 20.0),
-                            child: Icon(
+                        ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month,
+                              color: Colors.white,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              appointmentInfo,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Spacer(),
+                            Icon(
                               FontAwesomeIcons.clock,
                               color: primaryBlue,
                               size: 20,
                             ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 22,
-                            backgroundImage: AssetImage(
-                              "lib/assets/doctor.jpeg",
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 22,
+                              backgroundImage: AssetImage(
+                                "lib/assets/doctor.jpeg",
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                "Dr. Emily White",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  "Dr. Emily White",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                "Clinic Room 3",
-                                style: TextStyle(color: Colors.white54),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      const SizedBox(height: 20),
-
-                      // Buttons
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-                        child: Row(
+                                SizedBox(height: 4),
+                                Text(
+                                  "Clinic Room 3",
+                                  style: TextStyle(color: Colors.white54),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {},
+                                onPressed: () => _handleBooking(),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(color: Colors.white54),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   "Reschedule",
                                   style: TextStyle(color: Colors.white),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {},
-
+                                onPressed: () {
+                                  setState(() {
+                                    hasBooking = false;
+                                    appointmentInfo =
+                                        "No upcoming appointments";
+                                  });
+                                },
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.red),
+                                  side: BorderSide(color: Colors.red),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   "Cancel",
-
                                   style: TextStyle(color: Colors.red),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
@@ -368,7 +427,7 @@ class _PatientHomeState extends State<PatientHome> {
               child: Container(
                 width: double.infinity,
                 height: 50,
-                alignment: Alignment.centerLeft, 
+                alignment: Alignment.centerLeft,
                 child: const Text(
                   "Quick Access",
                   style: TextStyle(
@@ -384,7 +443,7 @@ class _PatientHomeState extends State<PatientHome> {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: 5,
+                itemCount: 4,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
@@ -431,10 +490,7 @@ class _PatientHomeState extends State<PatientHome> {
         onTap: () {
           switch (index) {
             case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => Bookingpage()),
-              );
+              _handleBooking();
               break;
             case 1:
               Navigator.push(
@@ -443,10 +499,12 @@ class _PatientHomeState extends State<PatientHome> {
               );
               break;
             case 2:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => RiskScore()),
+              );
               break;
             case 3:
-              break;
-            case 4:
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => HabitTracker()),
@@ -457,12 +515,12 @@ class _PatientHomeState extends State<PatientHome> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: const Color(0xFF2EC4FF), size: 32),
+            Icon(icon, color:  Color(0xFF2EC4FF), size: 32),
             const SizedBox(height: 10),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style:  TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
               ),
