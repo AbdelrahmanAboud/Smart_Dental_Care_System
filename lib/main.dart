@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
+import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
 import 'package:smart_dental_care_system/pages/pateint/BookingPage.dart';
 import 'package:smart_dental_care_system/pages/pateint/Habit_Tracker.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';

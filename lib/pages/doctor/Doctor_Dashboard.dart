@@ -76,19 +76,17 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         break;
 
       case 1:
-       
-        break;
-
-      case 2:
-        Navigator.pushReplacement(
+         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => Analytics()),
         );
         break;
 
-      case 3:
+      case 2:
       
         break;
+
+     
     }
   },
 
@@ -97,10 +95,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       icon: Icon(Icons.home),
       label: "Home",
     ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.event_note),
-      label: "Planner",
-    ),
+
     BottomNavigationBarItem(
       icon: Icon(Icons.analytics),
       label: "Analytics",

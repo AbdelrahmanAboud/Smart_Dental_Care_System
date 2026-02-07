@@ -15,9 +15,9 @@ class Bookingpage extends StatefulWidget {
 }
 
 class _BookingpageState extends State<Bookingpage> {
+  
   DateTime focusedDay = DateTime.now();
   DateTime? selectedDay;
-
   List<String> todaySlots = [];
   String? selectedSlot;
 
@@ -227,12 +227,13 @@ class _BookingpageState extends State<Bookingpage> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-    padding: const EdgeInsets.all(16.0),
+    bottomNavigationBar: Padding (
+    padding:  EdgeInsets.all(16.0),
     child: SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
+
           if (selectedSlot != null) {
             showBookingDialog(context, selectedSlot!, selectedDay!);
           } else {
@@ -262,7 +263,6 @@ class _BookingpageState extends State<Bookingpage> {
     );
   }
 }
-
 void showBookingDialog(BuildContext context, String slot, DateTime date) {
   showDialog(
     context: context,
@@ -271,20 +271,20 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
     builder: (BuildContext context) {
       return Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(20),
+        insetPadding: const EdgeInsets.all(20),
         child: Container(
           width: MediaQuery.of(context).size.width * 0.85,
-          padding: EdgeInsets.all(2),
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            gradient: LinearGradient(
+            gradient:  LinearGradient(
               colors: [accentCyan, Colors.transparent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+            padding:  EdgeInsets.symmetric(vertical: 30, horizontal: 20),
             decoration: BoxDecoration(
               color: primaryDark,
               borderRadius: BorderRadius.circular(28),
@@ -293,7 +293,7 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: EdgeInsets.all(15),
+                  padding:  EdgeInsets.all(15),
                   decoration: BoxDecoration(
                     color: accentCyan.withOpacity(0.1),
                     shape: BoxShape.circle,
@@ -305,10 +305,10 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.stars_rounded, size: 60, color: accentCyan),
+                  child:  Icon(Icons.stars_rounded, size: 60, color: accentCyan),
                 ),
-                SizedBox(height: 25),
-                Text(
+                 SizedBox(height: 25),
+                 Text(
                   "AWESOME!",
                   style: TextStyle(
                     fontSize: 26,
@@ -317,7 +317,7 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   "Your spot is secured",
                   style: TextStyle(
@@ -325,10 +325,10 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                     color: accentCyan.withOpacity(0.8),
                   ),
                 ),
-                SizedBox(height: 25),
+                 SizedBox(height: 25),
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(15),
@@ -338,30 +338,35 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                     children: [
                       Text(
                         slot,
-                        style: TextStyle(
+                        style:  TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                       SizedBox(height: 5),
                       Text(
                         DateFormat('EEEE, dd MMM yyyy').format(date),
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 35),
+                 SizedBox(height: 35),
                 GestureDetector(
                   onTap: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); 
+                    
+                    Navigator.of(context).pop({
+                      'selectedDate': date,
+                      'selectedSlot': slot,
+                    });
                   },
                   child: Container(
                     width: double.infinity,
                     height: 55,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [accentCyan, Color(0xFF0099FF)],
                       ),
                       borderRadius: BorderRadius.circular(15),
@@ -369,11 +374,11 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                         BoxShadow(
                           color: accentCyan.withOpacity(0.4),
                           blurRadius: 15,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    child: Center(
+                    child:  Center(
                       child: Text(
                         "GREAT",
                         style: TextStyle(
@@ -392,6 +397,5 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
         ),
       );
     },
-    
   );
 }

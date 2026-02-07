@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_dental_care_system/pages/doctor/Tooth_Chart.dart';
+import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
@@ -447,8 +448,10 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {},
-                    child: const Text(
+                        onPressed: () {
+                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>TreatmentPlan()));
+                              },
+                    child:  Text(
                       "Start New Treatment",
                       style: TextStyle(
                         fontSize: 16,

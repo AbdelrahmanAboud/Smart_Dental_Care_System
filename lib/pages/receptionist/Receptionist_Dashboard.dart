@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/PateintModels/AvailableDay.dart';
 import 'package:smart_dental_care_system/data/receptionistModels/Appointment_Model.dart';
+import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Billing%20.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Analytics.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Recptionist_Traffic.dart';
 import 'package:smart_dental_care_system/pages/receptionist/SchedulePage.dart';
@@ -338,6 +339,12 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
         break;
 
       case 3:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Billing()),
+        );
+        break;
+      case 4:
       
         break;
     }
@@ -355,6 +362,10 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
     BottomNavigationBarItem(
       icon: Icon(Icons.analytics),
       label: "Analytics",
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.attach_money),
+      label: "Billing",
     ),
     BottomNavigationBarItem(
       icon: Icon(Icons.chat),
