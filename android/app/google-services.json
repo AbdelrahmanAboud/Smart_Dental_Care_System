@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "677849260890",
+    "project_id": "smart-dental-care-system-622e0",
+    "storage_bucket": "smart-dental-care-system-622e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:677849260890:android:2324ccff1821032bd50963",
+        "android_client_info": {
+          "package_name": "com.example.smart_dental_care_system"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "677849260890-3or2pk7o0vm7q0pnkg97t6uvcjmbm9dk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smart_dental_care_system",
+            "certificate_hash": "ecc7d2f4df9a58e1ff7764628fe6de1e106cb920"
+          }
+        },
+        {
+          "client_id": "677849260890-osfsj51b908q8t813a9i8nvr315mt0c9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATIbA0ynPG1-PyXgy-MymsknRND-v9mRY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "677849260890-osfsj51b908q8t813a9i8nvr315mt0c9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "677849260890-5l6i6avar4dapcij21hu969bjvhlk4e2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartDentalCareSystem"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

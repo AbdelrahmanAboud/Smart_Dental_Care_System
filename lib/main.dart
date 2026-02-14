@@ -1,4 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_dental_care_system/firebase_options.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
 import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
 import 'package:smart_dental_care_system/pages/pateint/BookingPage.dart';
@@ -15,8 +17,13 @@ import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboa
  final Color primaryBlue = const Color(0xFF2EC4FF);
  final Color cardColor = const Color(0xFF112B3C);
 
-void main() {
-runApp(MaterialApp(
+void main() async {
+    WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+runApp(
+  MaterialApp(
   debugShowCheckedModeBanner: false,
   home: Login(),
 )
