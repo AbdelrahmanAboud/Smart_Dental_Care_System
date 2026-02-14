@@ -1,8 +1,15 @@
+import 'dart:math';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smart_dental_care_system/OTPScreen.dart';
+import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
 import 'package:smart_dental_care_system/pages/pateint/navigation_bar.dart';
-
-
+import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboard.dart';
+import 'package:smart_dental_care_system/services/auth_service.dart';
+import 'package:smart_dental_care_system/services/database_service.dart';
 import 'login.dart';
 
 class Register extends StatefulWidget {
@@ -14,6 +21,15 @@ class _RegisterState extends State<Register> {
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController ageController = TextEditingController();
+  final TextEditingController ConfirmPasswordController =
+      TextEditingController();
+  final TextEditingController accessCodeController = TextEditingController();
+  final String doctorSecret = "DOC123";
+  final String receptionistSecret = "REC456";
   String selectedRole = "Patient";
   bool isPasswordObscure = true;
   bool isConfirmPasswordObscure = true;
@@ -62,6 +78,7 @@ class _RegisterState extends State<Register> {
                   roleCard("Receptionist", Icons.business_center_outlined),
                 ],
               ),
+
               SizedBox(height: 15),
               Divider(
                 color: const Color.fromARGB(255, 13, 12, 12),
@@ -73,6 +90,7 @@ class _RegisterState extends State<Register> {
               Padding(
                 padding: EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: nameController,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
                     hintText: "Full name...",
@@ -85,7 +103,7 @@ class _RegisterState extends State<Register> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20.0),
-                      borderSide: BorderSide(color: Colors.white, width: 4),
+                      borderSide: BorderSide(color: Colors.white, width: 2),
                     ),
                   ),
                 ),
@@ -95,6 +113,7 @@ class _RegisterState extends State<Register> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: TextFormField(
+                  controller: ageController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
@@ -133,6 +152,7 @@ class _RegisterState extends State<Register> {
               Padding(
                 padding: EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: emailController,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
                     hintText: "Enter your email...",
@@ -145,7 +165,7 @@ class _RegisterState extends State<Register> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20.0),
-                      borderSide: BorderSide(color: Colors.white, width: 4),
+                      borderSide: BorderSide(color: Colors.white, width: 2),
                     ),
                   ),
                 ),
@@ -154,6 +174,7 @@ class _RegisterState extends State<Register> {
               Padding(
                 padding: const EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: passwordController,
                   obscureText: isPasswordObscure,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
@@ -197,6 +218,7 @@ class _RegisterState extends State<Register> {
               Padding(
                 padding: const EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: ConfirmPasswordController,
                   obscureText: isConfirmPasswordObscure,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
@@ -235,6 +257,40 @@ class _RegisterState extends State<Register> {
                 ),
               ),
               SizedBox(height: 15),
+              Visibility(
+                visible: selectedRole != "Patient", 
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 15,
+                  ),
+                  child: TextFormField(
+                    controller: accessCodeController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Enter Authorization Code...",
+                      labelText: "Security Code",
+                      labelStyle:  TextStyle(color: Colors.grey),
+                      prefixIcon:  Icon(
+                        Icons.verified_user,
+                        color: Colors.grey,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                        borderSide: const BorderSide(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 15),
 
               Padding(
                 padding: const EdgeInsets.only(left: 16.0, right: 16),
@@ -250,13 +306,78 @@ class _RegisterState extends State<Register> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => NavigitionBar(),
-                        ),
-                      );
-                    },
+                   onPressed: () async {
+  String name = nameController.text.trim();
+  String age = ageController.text.trim();
+  String email = emailController.text.trim();
+  String pass = passwordController.text.trim();
+  String confirmpass = ConfirmPasswordController.text.trim();
+  String enteredCode = accessCodeController.text.trim();
+
+  if (name.isEmpty || email.isEmpty || pass.isEmpty || age.isEmpty) {
+    showError("Please fill in all fields!");
+    return;
+  }
+  if (selectedRole != "Patient") {
+    String requiredCode = (selectedRole == "Doctor")
+        ? doctorSecret
+        : receptionistSecret;
+    if (enteredCode != requiredCode) {
+      showError("Unauthorized! Invalid code for $selectedRole registration.");
+      return;
+    }
+  }
+
+  if (!email.contains('@')) {
+    showError("Please enter a valid email address!");
+    return;
+  }
+  if (pass.length < 6) {
+    showError("Password must be at least 6 characters!");
+    return;
+  }
+  if (pass != confirmpass) {
+    showError("Passwords do not match!");
+    return;
+  }
+
+  
+  showLoading(context); 
+
+  try {
+    String generatedOtp = (Random().nextInt(900000) + 100000).toString();
+
+    AuthService authService = AuthService();
+    bool isSent = await authService.sendOTP(
+      email: email,
+      otpCode: generatedOtp,
+    );
+
+    if (context.mounted) Navigator.pop(context); 
+
+    if (isSent) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => OTPScreen(
+            email: email,
+            password: pass,
+            name: name,
+            age: age,
+            role: selectedRole,
+            correctOTP: generatedOtp,
+          ),
+        ),
+      );
+    } else {
+      showError("Failed to send verification email. Please try again.");
+    }
+
+  } catch (e) {
+    if (context.mounted) Navigator.pop(context);
+    showError("An unexpected error occurred. Please try again.");
+  }
+},
+
                     child: Text(
                       "Signup ",
                       style: TextStyle(color: Colors.black, fontSize: 20),
@@ -311,7 +432,95 @@ class _RegisterState extends State<Register> {
                               ),
                             ),
                           ),
-                          onPressed: () {},
+                  onPressed: () async {
+
+  if (selectedRole != "Patient") {
+    String enteredKey = "";
+    String requiredCode = (selectedRole == "Doctor") ? doctorSecret : receptionistSecret;
+
+    bool isAuthorized = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text("Security Verification", style: TextStyle(color: primaryBlue)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Enter the secret key for $selectedRole", style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 15),
+            TextField(
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Secret Key",
+                hintStyle: const TextStyle(color: Colors.grey),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
+              ),
+              onChanged: (value) => enteredKey = value.trim(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
+            child: const Text("Verify", style: TextStyle(color: Colors.black)),
+            onPressed: () {
+              if (enteredKey == requiredCode) {
+                Navigator.pop(context, true);
+              } else {
+                showError("Wrong Secret Key!");
+              }
+            },
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!isAuthorized) return;
+  }
+
+  showLoading(context);
+  try {
+    AuthService authService = AuthService();
+    User? user = await authService.signUpWithGoogle(showError);
+
+    if (user != null) {
+  
+      await DatabaseService().saveUserData(
+        uid: user.uid,
+        name: nameController.text.trim().isEmpty ? (user.displayName ?? "User") : nameController.text.trim(),
+        age: " ",
+        email: user.email ?? "",
+        role: selectedRole,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context); 
+
+        if (selectedRole == 'Doctor') {
+         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>DoctorDashboard()));
+        } else if (selectedRole == 'Receptionist') {
+         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>ReceptionistDashboard()));
+        } else {
+         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>PatientHome()));
+        }
+      }
+    } else {
+      if (context.mounted) Navigator.pop(context);
+      showError("Google Sign-In was cancelled or failed.");
+    }
+  } catch (e) {
+    if (context.mounted) Navigator.pop(context);
+    print("Error during Google Sign-In: $e"); 
+    showError("Error: ${e.toString()}"); 
+  }
+},
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -493,6 +702,26 @@ class _RegisterState extends State<Register> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void showLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          Center(child: CircularProgressIndicator(color: Color(0xFF2EC4FF))),
+    );
+  }
+
+  void showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

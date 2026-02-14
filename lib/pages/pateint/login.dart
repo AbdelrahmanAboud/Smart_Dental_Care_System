@@ -1,9 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
 import 'package:smart_dental_care_system/pages/pateint/Register.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboard.dart';
+import 'package:smart_dental_care_system/services/auth_service.dart';
+import 'package:smart_dental_care_system/services/database_service.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -12,7 +16,9 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   @override
-  bool patientSelected = true; 
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool patientSelected = true;
   bool doctorSelected = false;
   bool receptionistSelected = false;
   bool isObscure = true;
@@ -65,7 +71,7 @@ class _LoginState extends State<Login> {
                         patientSelected = true;
                         doctorSelected = false;
                         receptionistSelected = false;
-                        index =0;
+                        index = 0;
                       });
                     },
                     child: Padding(
@@ -122,8 +128,7 @@ class _LoginState extends State<Login> {
                         patientSelected = false;
                         doctorSelected = true;
                         receptionistSelected = false;
-                                                index =1;
-
+                        index = 1;
                       });
                     },
                     child: Padding(
@@ -180,8 +185,7 @@ class _LoginState extends State<Login> {
                         patientSelected = false;
                         doctorSelected = false;
                         receptionistSelected = true;
-                                                index =2;
-
+                        index = 2;
                       });
                     },
                     child: Padding(
@@ -234,16 +238,17 @@ class _LoginState extends State<Login> {
               ),
               SizedBox(height: 15),
               Divider(
-                color: const Color.fromARGB(255, 13, 12, 12), 
+                color: const Color.fromARGB(255, 13, 12, 12),
                 thickness: 2,
-                indent: 20, 
-                endIndent: 20, 
+                indent: 20,
+                endIndent: 20,
               ),
               SizedBox(height: 15),
 
               Padding(
                 padding: EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: emailController,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
                     hintText: "Enter your ُEmail...",
@@ -265,6 +270,7 @@ class _LoginState extends State<Login> {
               Padding(
                 padding: const EdgeInsets.only(left: 12.0, right: 12.0),
                 child: TextFormField(
+                  controller: passwordController,
                   obscureText: isObscure,
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
@@ -314,37 +320,62 @@ class _LoginState extends State<Login> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {
-                      if(index==0){
-                         Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    PatientHome()
-                
-                )
-                
-                );
-                      }
-                      else if(index==1)
-                      {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    DoctorDashboard()
-                
-                )
-                
-                
-                );
-                      }
-                      else if(index==2)
-                      {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    ReceptionistDashboard()
-                
-                )
-                
-                
-                );
+                    onPressed: () async {
+                      String email = emailController.text.trim();
+                      String pass = passwordController.text.trim();
+
+                      String selectedRole = "";
+                      if (patientSelected)
+                        selectedRole = "Patient";
+                      else if (doctorSelected)
+                        selectedRole = "Doctor";
+                      else if (receptionistSelected)
+                        selectedRole = "Receptionist";
+
+                      if (email.isEmpty || pass.isEmpty) {
+                        showError("Please fill all fields");
+                        return;
                       }
 
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) =>
+                            Center(child: CircularProgressIndicator()),
+                      );
 
+                      try {
+                        AuthService authService = AuthService();
+                        User? user = await authService.login(
+                          email,
+                          pass,
+                          showError,
+                        );
+
+                        if (user != null) {
+                          String? actualRole = await DatabaseService()
+                              .getUserRole(user.uid);
+
+                          Navigator.pop(context);
+
+                          if (actualRole != null) {
+                            if (actualRole == selectedRole) {
+                              _navigateToDashboard(actualRole);
+                            } else {
+                              showError(
+                                "Access Denied: You are registered as a $actualRole, not a $selectedRole.",
+                              );
+                            }
+                          } else {
+                            showError("User record not found in database.");
+                          }
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        Navigator.pop(context);
+                        showError("An unexpected error occurred.");
+                      }
                     },
                     child: Text(
                       "Login ",
@@ -400,12 +431,65 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                           ),
-                          onPressed: () {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>ReceptionistDashboard()));
+                          onPressed: () async {
+                            showLoading(context);
+
+                            try {
+                              User? user = await AuthService()
+                                  .signInWithGoogleForLogin(showError);
+
+                              if (user == null) {
+                                if (context.mounted) Navigator.pop(context);
+                                return;
+                              }
+
+                              if (context.mounted) {
+                                var userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .get();
+
+                                if (context.mounted) Navigator.pop(context);
+
+                                if (userDoc.exists) {
+                                  String role = userDoc.get('role');
+
+                                  if (role == 'Doctor') {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => DoctorDashboard(),
+                                      ),
+                                    );
+                                  } else if (role == 'Receptionist') {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReceptionistDashboard(),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => PatientHome(),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => Register(),
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (context.mounted) Navigator.pop(context);
+                              showError("An unexpected error occurred.");
+                            }
                           },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children:  [
+                            children: [
                               Icon(
                                 FontAwesomeIcons.chrome,
                                 size: 16,
@@ -483,7 +567,7 @@ class _LoginState extends State<Login> {
                           onPressed: () {},
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
+                            children: [
                               Icon(
                                 FontAwesomeIcons.facebookF,
                                 size: 16,
@@ -515,7 +599,7 @@ class _LoginState extends State<Login> {
                   ),
                   TextButton(
                     onPressed: () {
-                         Navigator.push(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => Register()),
                       );
@@ -531,36 +615,50 @@ class _LoginState extends State<Login> {
                   ),
                 ],
               ),
-              // Text.rich(
-              //   textAlign: TextAlign.center,
-              //   TextSpan(
-              //     style: TextStyle(color: Color(0xFFA0AAB8), fontSize: 12),
-              //     children: [
-              //       TextSpan(text: "By logging in, you agree to our "),
-              //       TextSpan(
-              //         text: "Terms of Service",
-              //         style: TextStyle(
-              //           color: Color(0xFF00CCFF),
-              //           fontWeight: FontWeight.w600,
-              //         ),
-              //       ),
-              //       TextSpan(text: " and "),
-              //       TextSpan(
-              //         text: "Privacy Policy",
-              //         style: TextStyle(
-              //           color: Color(0xFF00CCFF),
-              //           fontWeight: FontWeight.w600,
-              //         ),
-              //       ),
-              //       TextSpan(text: "."),
-              //     ],
-              //   ),
-              // ),
+
               SizedBox(height: 20),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _navigateToDashboard(String role) {
+    Widget nextScreen;
+    switch (role) {
+      case 'Doctor':
+        nextScreen = DoctorDashboard();
+        break;
+      case 'Receptionist':
+        nextScreen = ReceptionistDashboard();
+        break;
+      default:
+        nextScreen = PatientHome();
+    }
+
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (context) => nextScreen));
+  }
+
+  void showLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          Center(child: CircularProgressIndicator(color: Color(0xFF2EC4FF))),
     );
   }
 }
