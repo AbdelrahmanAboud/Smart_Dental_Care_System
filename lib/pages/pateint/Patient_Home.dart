@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +20,27 @@ class _PatientHomeState extends State<PatientHome> {
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
+  
+Map<String, dynamic>? userData;
+  bool isLoading = true;
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  fetchData() async {
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    setState(() {
+      userData = doc.data() as Map<String, dynamic>;
+      isLoading = false;
+    });
+  }
 
   final List<Map<String, dynamic>> quickAccessItems = [
     {"icon": FontAwesomeIcons.book, "title": "Book"},
@@ -45,7 +68,10 @@ class _PatientHomeState extends State<PatientHome> {
         hasBooking = true;
       });
     }
+    
   }
+  
+  
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +83,15 @@ class _PatientHomeState extends State<PatientHome> {
         elevation: 0,
         titleSpacing: 0,
 
-        // automaticallyImplyLeading: false,
-        title: Text(
-          "Patient Home",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 20.0),
+          child: Text(
+            "Patient Home",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
 
@@ -107,7 +135,7 @@ class _PatientHomeState extends State<PatientHome> {
             Padding(
               padding: const EdgeInsets.only(left: 10.0),
               child: Text(
-                "Welcome back, Mego! ",
+                "Welcome back, ${userData?["name"]} ! ",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -289,7 +317,7 @@ class _PatientHomeState extends State<PatientHome> {
 
             SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+              padding:  EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
                 height: 55,

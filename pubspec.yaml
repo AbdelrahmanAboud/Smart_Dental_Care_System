@@ -48,6 +48,9 @@ dependencies:
   google_sign_in: ^6.1.0
   emailjs: 4.0.0
   pinput: ^6.0.2
+  file_picker: ^8.0.0
+  cached_network_image: ^3.3.1
+
 
 dev_dependencies:
   flutter_test:
