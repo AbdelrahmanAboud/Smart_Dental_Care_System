@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
@@ -10,6 +12,54 @@ class HabitTracker extends StatefulWidget {
 }
 
 class _HabitTrackerState extends State<HabitTracker> {
+  bool isLoading = false;
+  @override
+  void initState() {
+    super.initState();
+    isLoading = true;
+    fetchHabits();
+  }
+
+  @override
+  Future<void> fetchHabits() async {
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+    DateTime now = DateTime.now();
+
+    var snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('dailyHabits')
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        for (var doc in snapshot.docs) {
+          Map<String, dynamic> data = doc.data();
+          Timestamp? lastUpdated = data['lastUpdated'];
+          bool status = data['status'] ?? false;
+
+          if (lastUpdated != null) {
+            DateTime lastDate = lastUpdated.toDate();
+
+            bool isSameDay =
+                lastDate.year == now.year &&
+                lastDate.month == now.month &&
+                lastDate.day == now.day;
+
+            for (var habit in dentalHabits) {
+              if (habit['title'] == doc.id) {
+                habit['isTracked'] = isSameDay ? status : false;
+              }
+            }
+          }
+        }
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+    }
+  }
+
   final List<Map<String, dynamic>> dentalHabits = [
     {
       "title": "Brush Teeth",
@@ -51,7 +101,7 @@ class _HabitTrackerState extends State<HabitTracker> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -66,14 +116,14 @@ class _HabitTrackerState extends State<HabitTracker> {
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(24),
-                 border: Border.all(color: Colors.white10),
-                 boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF2EC4FF).withOpacity(0.4),
-                              blurRadius: 15,
-                              spreadRadius: 1,
-                            ),
-                          ],
+                border: Border.all(color: Colors.white10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF2EC4FF).withOpacity(0.4),
+                    blurRadius: 15,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -94,16 +144,14 @@ class _HabitTrackerState extends State<HabitTracker> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                   SizedBox(height: 15),
+                  SizedBox(height: 15),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
                       value: percentage,
                       minHeight: 10,
                       backgroundColor: Colors.white10,
-                      valueColor:  AlwaysStoppedAnimation<Color>(
-                        primaryBlue,
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -144,17 +192,16 @@ class _HabitTrackerState extends State<HabitTracker> {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                      spreadRadius: 2,
-                    ),
-                  ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+              spreadRadius: 2,
+            ),
+          ],
           border: Border.all(
             color: done ? primaryBlue.withOpacity(0.5) : Colors.white10,
           ),
@@ -162,6 +209,7 @@ class _HabitTrackerState extends State<HabitTracker> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
+            
             children: [
               Row(
                 children: [
@@ -211,10 +259,20 @@ class _HabitTrackerState extends State<HabitTracker> {
                     value: habit['isTracked'],
                     activeColor: Colors.white,
                     activeTrackColor: primaryBlue,
-                    onChanged: (bool value) {
+                    onChanged: (bool value) async {
                       setState(() {
                         habit['isTracked'] = value;
                       });
+                      String uid = FirebaseAuth.instance.currentUser!.uid;
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('dailyHabits')
+                          .doc(habit['title'])
+                          .set({
+                            'status': value,
+                            'lastUpdated': DateTime.now(),
+                          });
                     },
                   ),
                 ],
