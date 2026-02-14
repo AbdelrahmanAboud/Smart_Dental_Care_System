@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/PateintModels/Feedbaack_Rating.dart';
 import 'package:smart_dental_care_system/main.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../services/database_service.dart';
 
 class PatientFeedback extends StatefulWidget {
   @override
@@ -12,6 +16,7 @@ class _PatientFeedbackState extends State<PatientFeedback> {
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
+  final TextEditingController _commentController = TextEditingController();
   int selectedRating = 0;
 
   @override
@@ -268,6 +273,8 @@ class _PatientFeedbackState extends State<PatientFeedback> {
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
+                  controller: _commentController,
+                  keyboardType: TextInputType.multiline,
                   maxLines: null,
                   style: TextStyle(color: Colors.white),
                   decoration: InputDecoration(
@@ -290,75 +297,126 @@ class _PatientFeedbackState extends State<PatientFeedback> {
             ),
             SizedBox(height: 10),
 
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: pastReviews.length,
-              itemBuilder: (context, index) {
-                final review = pastReviews[index];
+            StreamBuilder<QuerySnapshot>(
+              stream: DatabaseService().getMyReviews(FirebaseAuth.instance.currentUser!.uid),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      "Something went wrong",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
 
-                return Container(
-                  margin: EdgeInsets.only(bottom: 16),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        "No reviews yet. Be the first!",
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                  );
+                }
+
+                final reviews = snapshot.data!.docs;
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reviews.length,
+                  itemBuilder: (context, index) {
+                    final data = reviews[index].data() as Map<String, dynamic>? ?? {};
+
+                    // التعامل مع البيانات بأمان
+                    final String doctorName = data['doctorName'] ?? "Anonymous";
+                    final double rating = (data['rating'] != null)
+                        ? (data['rating'] as num).toDouble()
+                        : 0.0;
+                    final String comment = data['comment'] ?? "";
+                    final DateTime date = (data['createdAt'] != null && data['createdAt'] is Timestamp)
+                        ? (data['createdAt'] as Timestamp).toDate()
+                        : DateTime.now();
+                    final String formattedDate = "${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}";
+
+
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            backgroundImage: AssetImage(review.image),
-                            radius: 22,
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  review.name,
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: primaryBlue.withOpacity(0.2),
+                                child: Text(
+                                  doctorName[0].toUpperCase(),
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: primaryBlue,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                Text(
-                                  review.date,
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
+                                radius: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      doctorName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      formattedDate,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: List.generate(
+                                  5,
+                                      (i) => Icon(
+                                    i < rating ? Icons.star : Icons.star_border,
+                                    size: 16,
+                                    color: Colors.amber,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            children: List.generate(
-                              5,
-                              (i) => Icon(
-                                i < review.rating
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                size: 16,
-                                color: Colors.amber,
                               ),
-                            ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            comment,
+                            style: const TextStyle(color: Colors.white70),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10),
-                      Text(
-                        review.comment,
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
-            ),
+            )
+
           ],
         ),
       ),
@@ -377,22 +435,62 @@ class _PatientFeedbackState extends State<PatientFeedback> {
               ),
             ),
 
-            onPressed: () {
-              if (selectedRating > 0) {
-                _showSuccessDialog(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text("Give us some stars first! ⭐"),
-                    backgroundColor: primaryBlue.withOpacity(0.8),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              }
-            },
+              // استدعاء المكتبة فوق في الملف
+
+// ... داخل الـ onPressed ...
+              onPressed: () async {
+                if (selectedRating > 0) {
+                  try {
+                    // 1. هات الـ UID بتاع المستخدم الحالي
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null){
+
+                    // 2. روح هات الدوكيومنت بتاعه من جدول الـ users
+                    final userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user?.uid)
+                        .get();
+
+                    // 3. اسحب الاسم من الدوكيومنت
+                    String realName = "Patient"; // قيمة افتراضية
+                    if (userDoc.exists && userDoc.data() != null) {
+                      realName = userDoc.data()!['name'] ?? "Patient";
+                    }
+
+                    // 4. ابعت الريفيو بالاسم الحقيقي اللي جبناه من Firestore
+                    await DatabaseService().addReview(
+                      patientId: user!.uid,
+                      patientName: realName, // الاسم اللي جه من الداتا بيز
+                      doctorId: "D456",
+                      doctorName: "Dr. Evelyn Reed",
+                      rating: selectedRating,
+                      comment: _commentController.text,
+                    );
+        _showSuccessDialog(context);
+
+        // مسح النص بعد الإرسال بنجاح
+        _commentController.clear();
+        setState(() => selectedRating = 0);
+
+        } else {
+        // لو مفيش مستخدم مسجل دخول (حماية إضافية)
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please login first!")),
+        );
+        }
+        } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+        );
+        }
+        } else {
+        // إظهار SnackBar لو نسي يختار نجوم
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a rating! ⭐")),
+        );
+        }
+
+        },
             child: Text(
               'Submit Feedback',
               style: TextStyle(

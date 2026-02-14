@@ -1,3 +1,4 @@
+import 'dart:core';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseService {
@@ -11,29 +12,25 @@ class DatabaseService {
     required String role,
   }) async {
     try {
-
       await db.runTransaction((transaction) async {
-        
         DocumentReference statsRef = db.collection('metadata').doc('user_stats');
         DocumentSnapshot statsSnapshot = await transaction.get(statsRef);
 
-        int newId = 100;
+        int newId = 100; 
         if (statsSnapshot.exists) {
           newId = statsSnapshot['last_id'] + 1;
         }
-
+        
         transaction.set(statsRef, {'last_id': newId}, SetOptions(merge: true));
-
         transaction.set(db.collection('users').doc(uid), {
           'name': name,
           'age': age,
           'email': email,
           'role': role,
-          'id': newId.toString(), 
+          'id': newId.toString(),
           'createdAt': FieldValue.serverTimestamp(),
         });
       });
-      
     } catch (e) {
       print("Error saving user data: $e");
     }
@@ -42,5 +39,36 @@ class DatabaseService {
   Future<String> getUserRole(String uid) async {
     DocumentSnapshot doc = await db.collection('users').doc(uid).get();
     return doc['role'];
+  }
+
+  Future<void> addReview({
+    required String patientId,
+    required String patientName,
+    required String doctorId,
+    required String doctorName,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      await db.collection('reviews').add({
+        'patientId': patientId,
+        'patientName': patientName,
+        'doctorId': doctorId,
+        'doctorName': doctorName,
+        'rating': rating,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print("Error adding review: $e");
+      rethrow;
+    }
+  }
+  Stream<QuerySnapshot> getMyReviews(String patientId) {
+    return db
+        .collection('reviews')
+        .where('patientId', isEqualTo: patientId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 }

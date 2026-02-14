@@ -373,8 +373,8 @@ class _LoginState extends State<Login> {
                           Navigator.pop(context);
                         }
                       } catch (e) {
-                        Navigator.pop(context);
-                        showError("An unexpected error occurred.");
+                        Navigator.pop(context); print("Login error: $e");
+                        showError("Login failed: $e");
                       }
                     },
                     child: Text(
