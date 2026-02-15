@@ -17,11 +17,12 @@ class PatientHome extends StatefulWidget {
 }
 
 class _PatientHomeState extends State<PatientHome> {
+  String? appointmentId;
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
-  
-Map<String, dynamic>? userData;
+
+  Map<String, dynamic>? userData;
   bool isLoading = true;
   void initState() {
     super.initState();
@@ -36,8 +37,23 @@ Map<String, dynamic>? userData;
         .doc(uid)
         .get();
 
+    DocumentSnapshot apptDoc = await FirebaseFirestore.instance
+        .collection('appointments')
+        .doc(uid)
+        .get();
+
     setState(() {
       userData = doc.data() as Map<String, dynamic>;
+
+      if (apptDoc.exists) {
+        hasBooking = true;
+        appointmentId = uid;
+        var data = apptDoc.data() as Map<String, dynamic>;
+        DateTime date = (data['date'] as Timestamp).toDate();
+        String slot = data['slot'];
+        appointmentInfo = "${DateFormat('EEEE, dd MMM').format(date)} at $slot";
+      }
+
       isLoading = false;
     });
   }
@@ -61,17 +77,14 @@ Map<String, dynamic>? userData;
       setState(() {
         DateTime selectedDate = result['selectedDate'];
         String selectedSlot = result['selectedSlot'];
-
+        appointmentId = result['appointmentId'];
         String formattedDate = DateFormat('EEEE, dd MMM').format(selectedDate);
 
         appointmentInfo = "$formattedDate at $selectedSlot";
         hasBooking = true;
       });
     }
-    
   }
-  
-  
 
   @override
   Widget build(BuildContext context) {
@@ -97,14 +110,7 @@ Map<String, dynamic>? userData;
 
         centerTitle: false,
         actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 13.0),
-            child: IconButton(
-              iconSize: 28,
-              icon: Icon(Icons.notifications_none, color: Colors.white),
-              onPressed: () {},
-            ),
-          ),
+         
           Padding(
             padding: const EdgeInsets.only(right: 13.0),
             child: IconButton(
@@ -124,6 +130,68 @@ Map<String, dynamic>? userData;
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('emergencies')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const SizedBox();
+                }
+
+                var data = snapshot.data!.data() as Map<String, dynamic>;
+                String status = data['status'];
+
+                if (status == 'waiting') return const SizedBox();
+
+                return Container(
+                  margin: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: status == 'accepted'
+                        ? Colors.green.withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: status == 'accepted' ? Colors.green : Colors.red,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        status == 'accepted'
+                            ? Icons.check_circle
+                            : Icons.cancel,
+                        color: status == 'accepted' ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          status == 'accepted'
+                              ? "Your emergency request was accepted. Help is on the way!"
+                              : "Your request was declined. Please try calling the hospital.",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: Colors.white54,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          FirebaseFirestore.instance
+                              .collection('emergencies')
+                              .doc(FirebaseAuth.instance.currentUser!.uid)
+                              .delete();
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             SizedBox(height: 5),
             Divider(
               color: Colors.grey,
@@ -151,7 +219,7 @@ Map<String, dynamic>? userData;
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10.0),
+              padding: EdgeInsets.all(10.0),
               child: Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(16),
@@ -287,12 +355,99 @@ Map<String, dynamic>? userData;
                             SizedBox(width: 12),
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    hasBooking = false;
-                                    appointmentInfo =
-                                        "No upcoming appointments";
-                                  });
+                                onPressed: () async {
+                                  bool confirm = await showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: const Color(0xFF112B3C),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                        side: const BorderSide(
+                                          color: Colors.white10,
+                                        ),
+                                      ),
+                                      title: const Text(
+                                        "Cancel Appointment",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      content: const Text(
+                                        "Are you sure you want to cancel this booking?",
+                                        style: TextStyle(color: Colors.white70),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text(
+                                            "No, Keep it",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 8.0,
+                                          ),
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFFFF4B5C,
+                                              ).withOpacity(0.1),
+                                              foregroundColor: const Color(
+                                                0xFFFF4B5C,
+                                              ),
+                                              elevation: 0,
+                                              side: const BorderSide(
+                                                color: Color(0xFFFF4B5C),
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: Text(
+                                              "Yes, Cancel",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    try {
+                                      await FirebaseFirestore.instance
+                                          .collection('appointments')
+                                          .doc(appointmentId)
+                                          .delete();
+                                      setState(() {
+                                        hasBooking = false;
+                                        appointmentInfo =
+                                            "No upcoming appointments";
+                                      });
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Appointment cancelled successfully",
+                                          ),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      print("Error: $e");
+                                    }
+                                  }
                                 },
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(color: Colors.red),
@@ -317,7 +472,7 @@ Map<String, dynamic>? userData;
 
             SizedBox(height: 10),
             Padding(
-              padding:  EdgeInsets.only(left: 16.0, right: 16.0),
+              padding: EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
                 height: 55,
@@ -396,49 +551,159 @@ Map<String, dynamic>? userData;
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: globalIsEmergencySent
-                        ? Colors.grey
-                        : const Color(0xFFFF4B5C),
+                    backgroundColor: const Color(0xFFFF4B5C),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.withOpacity(0.5),
                     disabledForegroundColor: Colors.white70,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    elevation: globalIsEmergencySent ? 0 : 5,
                   ),
-                  onPressed: globalIsEmergencySent
-                      ? null
-                      : () {
-                          setState(() {
-                            globalEmergencyCount++;
-                            globalIsEmergencySent = true;
-                            globalLastPatientName = "3boud";
-                          });
+                  onPressed: () async {
+                    TextEditingController reasonController =
+                        TextEditingController();
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Emergency alert sent to Dr. Amgad!",
-                              ),
-                              backgroundColor: Colors.redAccent,
-                              behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 3),
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFF112B3C),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        insetPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                        ),
+                        title: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.redAccent,
                             ),
-                          );
-                        },
+                            SizedBox(width: 10),
+                            Text(
+                              "Emergency Reason",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Please describe the situation briefly:",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 15),
+                            TextField(
+                              controller: reasonController,
+                              style: TextStyle(color: Colors.white),
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText:
+                                    "e.g., Severe chest pain, High fever...",
+                                hintStyle: TextStyle(color: Colors.white24),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.redAccent,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              "Cancel",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 5,
+                            ),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 5,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 25,
+                                  vertical: 10,
+                                ),
+                              ),
+                              onPressed: () async {
+                                String uid =
+                                    FirebaseAuth.instance.currentUser!.uid;
+                                String patientName =
+                                    userData?["name"] ?? "Unknown Patient";
+                                String reason =
+                                    reasonController.text.trim().isEmpty
+                                    ? "Severe Pain"
+                                    : reasonController.text;
+
+                                await FirebaseFirestore.instance
+                                    .collection('emergencies')
+                                    .doc(uid)
+                                    .set({
+                                      'patientId': uid,
+                                      'name': patientName,
+                                      'reasons': reason,
+                                      'contact':
+                                          userData?['phone'] ?? 'No contact',
+                                      'time': DateFormat(
+                                        'hh:mm a',
+                                      ).format(DateTime.now()),
+                                      'timestamp': FieldValue.serverTimestamp(),
+                                      'status': 'waiting',
+                                    });
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: Colors.redAccent,
+                                    content: Text(
+                                      "Emergency alert sent successfully!",
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                "SEND ALERT",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        globalIsEmergencySent
-                            ? Icons.check_circle
-                            : Icons.error_outline_rounded,
-                        size: 24,
-                      ),
+                      Icon(Icons.error_outline_rounded, size: 24),
                       const SizedBox(width: 10),
                       Text(
-                        globalIsEmergencySent ? "Alert Sent" : "Emergency",
+                        "Emergency",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -543,12 +808,12 @@ Map<String, dynamic>? userData;
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color:  Color(0xFF2EC4FF), size: 32),
+            Icon(icon, color: Color(0xFF2EC4FF), size: 32),
             const SizedBox(height: 10),
             Text(
               title,
               textAlign: TextAlign.center,
-              style:  TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
               ),

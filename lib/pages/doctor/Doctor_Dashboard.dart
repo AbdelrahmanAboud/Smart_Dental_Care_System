@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/DoctorModels/PatientAppointment.dart';
@@ -16,9 +18,85 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
+  List<PatientAppointment> allTodayAppointments = [];
+  List<PatientAppointment> filteredAppointments = [];
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+
+  late Stream<QuerySnapshot> _emergencyStream;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+    _emergencyStream = FirebaseFirestore.instance
+        .collection('emergencies')
+        .where('status', isEqualTo: 'waiting')
+        .snapshots();
+  }
+
+  fetchData() async {
+    setState(() => isLoading = true);
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      var userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      userData = userDoc.data();
+    }
+
+    DateTime now = DateTime.now();
+    DateTime start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    var snapshot = await FirebaseFirestore.instance
+        .collection('appointments')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .get();
+
+    setState(() {
+      allTodayAppointments = snapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        return PatientAppointment(
+          uid: data['patientId'] ?? '',
+          name: data['patientName'] ?? 'Unknown',
+          status: data['status'] ?? "waiting",
+          treatment: data['treatment'] ?? '',
+          time: data['slot'] ?? '',
+          riskScore: (data['riskScore'] ?? 0).toInt(),
+        );
+      }).toList();
+
+      filteredAppointments = allTodayAppointments;
+
+      gridItems[0]["value"] = allTodayAppointments.length.toString();
+
+      gridItems[1]["value"] = allTodayAppointments
+          .where((a) => a.status == "Completed")
+          .length
+          .toString();
+
+      gridItems[2]["value"] = allTodayAppointments
+          .where((a) => a.status == "waiting")
+          .length
+          .toString();
+
+      if (allTodayAppointments.isNotEmpty) {
+        double adherence =
+            (int.parse(gridItems[1]["value"]) / allTodayAppointments.length) *
+            100;
+        gridItems[3]["value"] = "${adherence.toStringAsFixed(0)}%";
+      } else {
+        gridItems[3]["value"] = "0%";
+      }
+      isLoading = false;
+    });
+  }
+
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
-  List<PatientAppointment> filteredAppointments = [];
 
   final List<Map<String, dynamic>> gridItems = [
     {
@@ -34,7 +112,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       "color": Colors.cyanAccent,
     },
     {
-      "title": "Pending",
+      "title": "waiting",
       "value": "5",
       "icon": FontAwesomeIcons.clock,
       "color": Colors.orangeAccent,
@@ -47,15 +125,9 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
     },
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    filteredAppointments = appointments;
-  }
-
   void filterSearch(String query) {
     setState(() {
-      filteredAppointments = appointments
+      filteredAppointments = allTodayAppointments
           .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
           .toList();
     });
@@ -64,49 +136,34 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
- bottomNavigationBar: BottomNavigationBar(
-  type: BottomNavigationBarType.fixed,
-  backgroundColor: cardColor,
-  selectedItemColor: primaryBlue,
-  unselectedItemColor: Colors.white54,
-
-  onTap: (value) {
-    switch (value) {
-      case 0:
-        break;
-
-      case 1:
-         Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Analytics()),
-        );
-        break;
-
-      case 2:
-      
-        break;
-
-     
-    }
-  },
-
-  items:  [
-    BottomNavigationBarItem(
-      icon: Icon(Icons.home),
-      label: "Home",
-    ),
-
-    BottomNavigationBarItem(
-      icon: Icon(Icons.analytics),
-      label: "Analytics",
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.chat),
-      label: "Chat",
-    ),
-  ],
-),
-
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: cardColor,
+        selectedItemColor: primaryBlue,
+        unselectedItemColor: Colors.white54,
+        onTap: (value) {
+          switch (value) {
+            case 0:
+              break;
+            case 1:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => Analytics()),
+              );
+              break;
+            case 2:
+              break;
+          }
+        },
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: "Analytics",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
+        ],
+      ),
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
@@ -118,7 +175,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                   setState(() {
                     isSearching = false;
                     searchController.clear();
-                    filteredAppointments = appointments;
+                    filteredAppointments = allTodayAppointments;
                   });
                 },
               )
@@ -138,7 +195,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                   ),
                 ),
               ),
-
         title: isSearching
             ? TextField(
                 controller: searchController,
@@ -152,7 +208,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                 onChanged: filterSearch,
               )
             : null,
-
         actions: [
           isSearching
               ? IconButton(
@@ -170,7 +225,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                     color: Colors.white,
                   ),
                 ),
-
           if (!isSearching)
             IconButton(
               onPressed: () {},
@@ -187,7 +241,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               Divider(thickness: 1, color: Colors.white10),
               SizedBox(height: 10),
               Text(
-                "Welcome, Dr. 3boud!",
+                "Welcome, Dr. ${userData?['name'] ?? ''} !",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -199,7 +253,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
               SizedBox(height: 12),
-
               GridView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),
@@ -252,74 +305,86 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                   );
                 },
               ),
+              StreamBuilder<QuerySnapshot>(
+                stream: _emergencyStream, 
+                builder: (context, snapshot) {
+                  int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  var lastEmergency = count > 0
+                      ? snapshot.data!.docs.first.data() as Map<String, dynamic>
+                      : null;
 
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 20),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFFFF4B5C).withOpacity(0.3),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      color: Color(0xFFFF4B5C),
-                      size: 28,
-                    ),
-                    SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "${globalEmergencyCount} Emergency Case",
-                            style: TextStyle(
-                              color: Color(0xFFFF4B5C),
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "John Davis - Severe toothache",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFFF4B5C),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  if (count == 0) return SizedBox.shrink();
+
+                  return Container(
+                    margin: EdgeInsets.symmetric(vertical: 20),
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFFFF4B5C).withOpacity(0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
                         ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (context)=>
-                    EmergencyAlerts() 
-                     ));
-                                        },
-                      child: Text(
-                        "View",
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFFF4B5C),
+                          size: 28,
+                        ),
+                        SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "$count Emergency Cases",
+                                style: TextStyle(
+                                  color: Color(0xFFFF4B5C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                lastEmergency != null
+                                    ? "${lastEmergency['name']} - ${lastEmergency['reasons']}"
+                                    : "New emergency alert",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFFF4B5C),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => EmergencyAlerts(),
+                            ),
+                          ),
+                          child: Text(
+                            "View",
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
-
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0, top: 10),
               child: Text(
@@ -333,27 +398,30 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                 ),
               ),
             ),
-
             Expanded(
-              child: filteredAppointments.isEmpty
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator(color: primaryBlue))
+                  : filteredAppointments.isEmpty
                   ? Center(
                       child: Text(
                         "No patients found",
                         style: TextStyle(color: Colors.white38),
                       ),
                     )
-                  : GestureDetector(
-                    onTap: (){
-
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context)=>PatientClinicalView())
-                      
-                      );
-                    },
-                    child: ListView.builder(
-                        itemCount: filteredAppointments.length,
-                        itemBuilder: (context, index) {
-                          final patient = filteredAppointments[index];
-                          return Container(
+                  : ListView.builder(
+                      itemCount: filteredAppointments.length,
+                      itemBuilder: (context, index) {
+                        final patient = filteredAppointments[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PatientClinicalView(patientId: patient.uid),
+                              ),
+                            );
+                          },
+                          child: Container(
                             margin: EdgeInsets.only(bottom: 12),
                             padding: EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -442,10 +510,10 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                 ),
                               ],
                             ),
-                          );
-                        },
-                      ),
-                  ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

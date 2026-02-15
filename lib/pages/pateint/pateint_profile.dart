@@ -230,25 +230,28 @@ class _PateintProfileState extends State<PateintProfile> {
 
                     SizedBox(height: 25),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Email",
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 15,
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Email  ",
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        Text(
-                          userData?["email"] ?? "-",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                          Text(
+                            userData?["email"] ?? "-",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
 
                     SizedBox(height: 18),
