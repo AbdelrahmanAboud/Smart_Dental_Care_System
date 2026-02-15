@@ -1,6 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/main.dart';
+
+import '../../services/database_service.dart';
 
 /// 🎨 Colors
 final Color bgColor =     Color(0xFF0B1C2D);
@@ -14,11 +18,18 @@ Color healthy = Color(0xFF06D6A0);
 
 /// 🦷 Tooth Chart Screen
 class Toothchart extends StatefulWidget {
+  final String patientId; // 1. ضيف السطر ده عشان يستلم الـ ID
+
+  // 2. حدث الـ Constructor بالشكل ده
+  const Toothchart({super.key, required this.patientId});
+
   @override
   State<Toothchart> createState() => _ToothchartState();
 }
 
 class _ToothchartState extends State<Toothchart> {
+  // ... باقي كود الصفحة عندك ...
+
   int? selectedTooth;
   bool showNoteCard = false;
   bool showStatusCard = false;
@@ -27,6 +38,7 @@ class _ToothchartState extends State<Toothchart> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: bgColor,
     appBar:  AppBar(
@@ -52,24 +64,42 @@ class _ToothchartState extends State<Toothchart> {
               fontWeight: FontWeight.w600,
             ),
           ),
-         
+
         ],
       ),
     ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeaderCard(),
-            const SizedBox(height: 28),
-            _buildTeethChart(),
-            buildStatusCard(),
-            buildNotesCard(),
-            buildRecentTreatments(),
-          ],
+        body: StreamBuilder<DocumentSnapshot>(
+            stream: DatabaseService().getTeethStream(widget.patientId),
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data!.exists) {
+                // كود لتحديث قائمة الـ teeth المحلية من بيانات فايربيز
+                var data = snapshot.data!.data() as Map<String, dynamic>;
+                if (data.containsKey('teeth_chart')) {
+                  var chart = data['teeth_chart'] as Map<String, dynamic>;
+                  chart.forEach((key, value) {
+                    int index = int.parse(key) - 1;
+                    teeth[index].status = value['status'];
+                    teeth[index].notes = value['notes'];
+                    teeth[index].isTreated = true;
+                  });
+                }
+              }
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildHeaderCard(),
+                    const SizedBox(height: 28),
+                    _buildTeethChart(),
+                    buildStatusCard(),
+                    buildNotesCard(),
+                    buildRecentTreatments(),
+                  ],
+                ),
+              );
+            },
         ),
-      ),
     );
   }
 
@@ -485,7 +515,7 @@ Widget buildRecentTreatments() {
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: Colors.white10),
     ),
-    
+
       child: ExpansionTile(
         iconColor: primaryBlue,
         shape: RoundedRectangleBorder(side: BorderSide.none),
@@ -576,7 +606,7 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
           ),
         ],
       ),
-    
+
   );
 }
 
@@ -674,11 +704,25 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
             ),
             const SizedBox(height: 16),
             GestureDetector(
-              onTap: () {
+              // ابحث عن GestureDetector بتاع Save Changes وغير الـ onTap
+              onTap: () async {
+                final user = widget.patientId;
+
+                if (user == null) return;
+
+                // 1. حفظ في فايربيز
+                await DatabaseService().updateToothStatus(
+                  patientId: widget.patientId, // أو الـ ID بتاع المريض لو اللي داخل دكتور
+                  toothNumber: selectedTooth!,
+                  status: status,
+                  notes: notesController.text,
+                );
+
+                // 2. تحديث الـ UI المحلي (اختياري لأن الـ StreamBuilder هيحدثها أوتوماتيك)
                 setState(() {
                   teeth[selectedTooth! - 1].notes = notesController.text;
-                  showNoteCard = false;
                   teeth[selectedTooth! - 1].isTreated = true;
+                  showNoteCard = false;
                 });
               },
               child: Container(

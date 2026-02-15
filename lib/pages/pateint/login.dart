@@ -3,11 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
-import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
 import 'package:smart_dental_care_system/pages/pateint/Register.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboard.dart';
 import 'package:smart_dental_care_system/services/auth_service.dart';
 import 'package:smart_dental_care_system/services/database_service.dart';
+
+import 'navigation_bar.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -81,6 +82,7 @@ class _LoginState extends State<Login> {
                         height: 100,
                         decoration: BoxDecoration(
                           color: patientSelected
+
                               ? Color(0xFF112B3C)
                               : Color(0xFF141C2F),
                           borderRadius: BorderRadius.circular(14),
@@ -470,7 +472,7 @@ class _LoginState extends State<Login> {
                                   } else {
                                     Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
-                                        builder: (context) => PatientHome(),
+                                        builder: (context) => NavigitionBar(),
                                       ),
                                     );
                                   }
@@ -645,13 +647,13 @@ class _LoginState extends State<Login> {
         nextScreen = ReceptionistDashboard();
         break;
       default:
-        nextScreen = PatientHome();
+        nextScreen = NavigitionBar();
     }
 
     Navigator.of(
       context,
     ).pushReplacement(MaterialPageRoute(builder: (context) => nextScreen));
-  }
+  } 
 
   void showLoading(BuildContext context) {
     showDialog(
