@@ -1,4 +1,5 @@
 class Emergencylist {
+  final String uid;
   final String name;
   final String resons;
   final String contact;
@@ -7,6 +8,7 @@ class Emergencylist {
 
 
   Emergencylist({
+    required this.uid,
     required this.name,
     required this.resons,
     required this.contact,
@@ -14,37 +16,61 @@ class Emergencylist {
     required this.spend,
   });
 }
-
-List<Emergencylist> emergencylist = [
+final List<Emergencylist> emergencylist = [
   Emergencylist(
-    name: "Sarah Johnson",
-    resons: "Sudden severe toothache with swelling on right side.",
-    contact: "+1 (555) 123-4567",
-    time: "09:15 AM - 2 mins ago",
-    spend :2,
-
+    uid: "u1",
+    name: "Ahmed Ali",
+    resons: "Severe Toothache",
+    contact: "01012345678",
+    time: "09:00 AM",
+    spend: 120, // القيمة دي اللي بتظهر في الـ Charts
   ),
   Emergencylist(
-    name: "Ahmed Mansour",
-    resons: "Heavy bleeding after wisdom tooth extraction.",
-    contact: "+20 100 456 7890",
-    time: "10:30 AM - 5 mins ago",
-    spend :5,
+    uid: "u2",
+    name: "Sarah Hassan",
+    resons: "Broken Crown",
+    contact: "01122334455",
+    time: "10:30 AM",
+    spend: 85,
   ),
   Emergencylist(
-    name: "Ahmed Mansour",
-    resons: "Traumatic injury: front tooth knocked out while playing.",
-    contact: "+20 111 222 3334",
-    time: "11:05 AM - 10 mins ago",
-    spend :10,
-
+    uid: "u3",
+    name: "Mohamed Omar",
+    resons: "Gum Bleeding",
+    contact: "01233445566",
+    time: "11:45 AM",
+    spend: 45,
   ),
   Emergencylist(
-    name: "John Smith",
-    resons: "Severe abscess causing difficulty in opening the jaw.",
-    contact: "+1 (555) 987-6543",
-    time: "12:20 PM - 1 min ago",
-    spend :1,
-
+    uid: "u4",
+    name: "Nour Eldin",
+    resons: "Abscess Treatment",
+    contact: "01544556677",
+    time: "02:15 PM",
+    spend: 150,
+  ),
+  Emergencylist(
+    uid: "u5",
+    name: "Laila Mahmoud",
+    resons: "Emergency Extraction",
+    contact: "01099887766",
+    time: "04:00 PM",
+    spend: 200,
+  ),
+  Emergencylist(
+    uid: "u6",
+    name: "Youssef Ibrahim",
+    resons: "Impacted Tooth",
+    contact: "01277889900",
+    time: "05:30 PM",
+    spend: 110,
+  ),
+  Emergencylist(
+    uid: "u7",
+    name: "Mariam Ahmed",
+    resons: "Loose Implant",
+    contact: "01144553322",
+    time: "07:00 PM",
+    spend: 95,
   ),
 ];

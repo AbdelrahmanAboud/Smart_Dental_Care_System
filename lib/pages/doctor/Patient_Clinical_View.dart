@@ -10,9 +10,13 @@ final Color cardColor = const Color(0xFF112B3C);
 class PatientClinicalView extends StatefulWidget {
   @override
   State<PatientClinicalView> createState() => _PatientClinicalViewState();
+  final String patientId;
+
+  const PatientClinicalView({super.key, required this.patientId});
 }
 
 class _PatientClinicalViewState extends State<PatientClinicalView> {
+  
   Color toothDefault = Color(0xFF1B263B);
   Color cavity = Color(0xFFFF4D6D);
   Color filling = Color(0xFF00E5FF);
@@ -56,6 +60,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
