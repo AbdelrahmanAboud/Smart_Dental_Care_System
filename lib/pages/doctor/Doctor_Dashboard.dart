@@ -18,16 +18,21 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
-
   List<PatientAppointment> allTodayAppointments = [];
   List<PatientAppointment> filteredAppointments = [];
   Map<String, dynamic>? userData;
   bool isLoading = true;
 
+  late Stream<QuerySnapshot> _emergencyStream;
+
   @override
   void initState() {
     super.initState();
     fetchData();
+    _emergencyStream = FirebaseFirestore.instance
+        .collection('emergencies')
+        .where('status', isEqualTo: 'waiting')
+        .snapshots();
   }
 
   fetchData() async {
@@ -69,13 +74,19 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       gridItems[0]["value"] = allTodayAppointments.length.toString();
 
       gridItems[1]["value"] = allTodayAppointments
-          .where((a) => a.status == "Completed").length.toString();
+          .where((a) => a.status == "Completed")
+          .length
+          .toString();
 
       gridItems[2]["value"] = allTodayAppointments
-          .where((a) => a.status == "waiting" || a.status == "Pending").length.toString();
+          .where((a) => a.status == "waiting")
+          .length
+          .toString();
 
       if (allTodayAppointments.isNotEmpty) {
-        double adherence = (int.parse(gridItems[1]["value"]) / allTodayAppointments.length) * 100;
+        double adherence =
+            (int.parse(gridItems[1]["value"]) / allTodayAppointments.length) *
+            100;
         gridItems[3]["value"] = "${adherence.toStringAsFixed(0)}%";
       } else {
         gridItems[3]["value"] = "0%";
@@ -88,10 +99,30 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   TextEditingController searchController = TextEditingController();
 
   final List<Map<String, dynamic>> gridItems = [
-    {"title": "Today", "value": "8", "icon": Icons.calendar_today, "color": Colors.lightGreenAccent},
-    {"title": "Completed", "value": "3", "icon": Icons.check_circle_outline, "color": Colors.cyanAccent},
-    {"title": "Pending", "value": "5", "icon": FontAwesomeIcons.clock, "color": Colors.orangeAccent},
-    {"title": "Adherence", "value": "92%", "icon": Icons.trending_up, "color": Colors.pinkAccent},
+    {
+      "title": "Today",
+      "value": "8",
+      "icon": Icons.calendar_today,
+      "color": Colors.lightGreenAccent,
+    },
+    {
+      "title": "Completed",
+      "value": "3",
+      "icon": Icons.check_circle_outline,
+      "color": Colors.cyanAccent,
+    },
+    {
+      "title": "waiting",
+      "value": "5",
+      "icon": FontAwesomeIcons.clock,
+      "color": Colors.orangeAccent,
+    },
+    {
+      "title": "Adherence",
+      "value": "92%",
+      "icon": Icons.trending_up,
+      "color": Colors.pinkAccent,
+    },
   ];
 
   void filterSearch(String query) {
@@ -112,19 +143,24 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         unselectedItemColor: Colors.white54,
         onTap: (value) {
           switch (value) {
-            case 0: break;
+            case 0:
+              break;
             case 1:
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => Analytics()),
               );
               break;
-            case 2: break;
+            case 2:
+              break;
           }
         },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: "Analytics"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: "Analytics",
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
         ],
       ),
@@ -134,27 +170,31 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         elevation: 0,
         leading: isSearching
             ? IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            setState(() {
-              isSearching = false;
-              searchController.clear();
-              filteredAppointments = allTodayAppointments;
-            });
-          },
-        )
+                icon: Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    isSearching = false;
+                    searchController.clear();
+                    filteredAppointments = allTodayAppointments;
+                  });
+                },
+              )
             : Padding(
-          padding: const EdgeInsets.only(left: 10.0, bottom: 8, top: 8),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8.0),
-              color: primaryBlue,
-            ),
-            child: Center(
-              child: Icon(FontAwesomeIcons.stethoscope, size: 18, color: Colors.black),
-            ),
-          ),
-        ),
+                padding: const EdgeInsets.only(left: 10.0, bottom: 8, top: 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.0),
+                    color: primaryBlue,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      FontAwesomeIcons.stethoscope,
+                      size: 18,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
         title: isSearching
             ? TextField(
           controller: searchController,
@@ -178,9 +218,13 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             },
           )
               : IconButton(
-            onPressed: () => setState(() => isSearching = true),
-            icon: Icon(FontAwesomeIcons.search, size: 20, color: Colors.white),
-          ),
+                  onPressed: () => setState(() => isSearching = true),
+                  icon: Icon(
+                    FontAwesomeIcons.search,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
           if (!isSearching)
             IconButton(
               onPressed: () {},
@@ -198,7 +242,11 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               SizedBox(height: 10),
               Text(
                 "Welcome, Dr. ${userData?['name'] ?? ''} !",
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               Text(
                 "Your daily overview at a glance.",
@@ -240,41 +288,84 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                   );
                 },
               ),
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 20),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(color: Color(0xFFFF4B5C).withOpacity(0.3), blurRadius: 10, spreadRadius: 1),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline_rounded, color: Color(0xFFFF4B5C), size: 28),
-                    SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("${globalEmergencyCount} Emergency Case", style: TextStyle(color: Color(0xFFFF4B5C), fontSize: 14, fontWeight: FontWeight.bold)),
-                          Text("John Davis - Severe toothache", style: TextStyle(color: Colors.white70, fontSize: 13), overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
+              StreamBuilder<QuerySnapshot>(
+                stream: _emergencyStream, 
+                builder: (context, snapshot) {
+                  int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  var lastEmergency = count > 0
+                      ? snapshot.data!.docs.first.data() as Map<String, dynamic>
+                      : null;
+
+                  if (count == 0) return SizedBox.shrink();
+
+                  return Container(
+                    margin: EdgeInsets.symmetric(vertical: 20),
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFFFF4B5C).withOpacity(0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFFF4B5C),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => EmergencyAlerts()));
-                      },
-                      child: Text("View", style: TextStyle(color: Colors.white, fontSize: 12)),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFFF4B5C),
+                          size: 28,
+                        ),
+                        SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "$count Emergency Cases",
+                                style: TextStyle(
+                                  color: Color(0xFFFF4B5C),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                lastEmergency != null
+                                    ? "${lastEmergency['name']} - ${lastEmergency['reasons']}"
+                                    : "New emergency alert",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFFF4B5C),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => EmergencyAlerts(),
+                            ),
+                          ),
+                          child: Text(
+                            "View",
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
             Padding(
@@ -288,68 +379,118 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               child: isLoading
                   ? Center(child: CircularProgressIndicator(color: primaryBlue))
                   : filteredAppointments.isEmpty
-                  ? Center(child: Text("No patients found", style: TextStyle(color: Colors.white38)))
+                  ? Center(
+                      child: Text(
+                        "No patients found",
+                        style: TextStyle(color: Colors.white38),
+                      ),
+                    )
                   : ListView.builder(
-                itemCount: filteredAppointments.length,
-                itemBuilder: (context, index) {
-                  final patient = filteredAppointments[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => PatientClinicalView(
-                          patientId: patient.uid,
-                        )),
-                      );
-                    },
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: 12),
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(patient.name, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: patient.status == "In Progress" ? Colors.cyan.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
+                      itemCount: filteredAppointments.length,
+                      itemBuilder: (context, index) {
+                        final patient = filteredAppointments[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PatientClinicalView(patientId: patient.uid),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: 12),
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      patient.name,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: patient.status == "In Progress"
+                                            ? Colors.cyan.withOpacity(0.1)
+                                            : Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        patient.status,
+                                        style: TextStyle(
+                                          color: patient.status == "In Progress"
+                                              ? Colors.cyanAccent
+                                              : Colors.orangeAccent,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: Text(patient.status, style: TextStyle(color: patient.status == "In Progress" ? Colors.cyanAccent : Colors.orangeAccent, fontSize: 11)),
-                              ),
-                            ],
+                                Text(
+                                  patient.treatment,
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time,
+                                          color: Colors.white38,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 5),
+                                        Text(
+                                          patient.time,
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "Risk Score: ${patient.riskScore}",
+                                      style: TextStyle(
+                                        color: patient.riskScore < 80
+                                            ? Colors.redAccent
+                                            : Colors.greenAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                          Text(patient.treatment, style: TextStyle(color: Colors.white54, fontSize: 13)),
-                          SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.access_time, color: Colors.white38, size: 16),
-                                  SizedBox(width: 5),
-                                  Text(patient.time, style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                ],
-                              ),
-                              Text(
-                                "Risk Score: ${patient.riskScore}",
-                                style: TextStyle(color: patient.riskScore < 80 ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

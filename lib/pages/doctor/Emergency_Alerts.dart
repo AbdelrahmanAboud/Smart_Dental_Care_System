@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:smart_dental_care_system/data/DoctorModels/EmergencyList.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
 final Color primaryBlue = const Color(0xFF2EC4FF);
@@ -16,7 +16,6 @@ class _EmergencyAlertsState extends State<EmergencyAlerts> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-
         backgroundColor: bgColor,
         elevation: 0,
         centerTitle: false,
@@ -41,114 +40,158 @@ class _EmergencyAlertsState extends State<EmergencyAlerts> {
         children: [
           const Divider(thickness: 1, color: Colors.white10),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(15),
-              itemCount: emergencylist.length,
-              itemBuilder: (context, index) {
-                final patient = emergencylist[index];
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('emergencies')
+                  .where('status', isEqualTo: 'waiting')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black.withOpacity(0.2)),
-                  
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            patient.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Color(0xFFFF4B5C)),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              "Urgent",
-                              style: TextStyle(
-                                color: Color(0xFFFF4B5C),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "No emergency alerts found",
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  );
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(15),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.black.withOpacity(0.2),
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      
-                      _buildInfoRow("Reason:", patient.resons),
-                      SizedBox(height: 12),
-                      _buildInfoRow("Contact:", patient.contact),
-                      SizedBox(height: 12),
-                      _buildInfoRow("Time:", patient.time),
-
-                      SizedBox(height: 25),
-
-                      Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF2ECC71).withOpacity(0.9),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed: () {},
-                              child: const Text(
-                                "Accept",
-                                style: TextStyle(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                data['name'] ?? 'Unknown',
+                                style: const TextStyle(
                                   color: Colors.white,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: Color(0xFFFF4B5C)),
-                                shape: RoundedRectangleBorder(
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFFFF4B5C),
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                child: const Text(
+                                  "Urgent",
+                                  style: TextStyle(
+                                    color: Color(0xFFFF4B5C),
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
-                              onPressed: () {},
-                              child: Text(
-                                "Decline",
-                                style: TextStyle(
-                                  color: Color(0xFFFF4B5C),
-                                  fontWeight: FontWeight.bold,
+                            ],
+                          ),
+                          SizedBox(height: 20),
+
+                          _buildInfoRow("Reason:", data['reasons'] ?? 'N/A'),
+                          const SizedBox(height: 12),
+                          _buildInfoRow("Contact:", data['contact'] ?? 'N/A'),
+                          const SizedBox(height: 12),
+                          _buildInfoRow("Time:", data['time'] ?? 'N/A'),
+
+                          const SizedBox(height: 25),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(
+                                      0xFF2ECC71,
+                                    ).withOpacity(0.9),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                  onPressed: () async {
+                                    print("Accept clicked");
+
+                                    String docId = docs[index].id;
+
+                                    await FirebaseFirestore.instance
+                                        .collection('emergencies')
+                                        .doc(docId)
+                                        .update({'status': 'accepted'});
+
+                                    print("Updated done");
+                                  },
+
+                                  child: Text(
+                                    "Accept",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(
+                                      color: Color(0xFFFF4B5C),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                 onPressed: () async {
+  await FirebaseFirestore.instance
+      .collection('emergencies')
+      .doc(docs[index].id)
+      .update({'status': 'declined'}); 
+},
+                                  child: Text(
+                                    "Decline",
+                                    style: TextStyle(
+                                      color: Color(0xFFFF4B5C),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),

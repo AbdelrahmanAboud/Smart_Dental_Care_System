@@ -18,65 +18,57 @@ class PatientClinicalView extends StatefulWidget {
 
   @override
   State<PatientClinicalView> createState() => _PatientClinicalViewState();
+  final String patientId;
+
+  const PatientClinicalView({super.key, required this.patientId});
 }
 
 class _PatientClinicalViewState extends State<PatientClinicalView> {
-
-  // دالة رفع الصورة وتحديث Firestore
-  Future<void> uploadAndSaveImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image == null) return;
-
-    // إظهار مؤشر تحميل (Loading)
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
-      ),
-    );
-
-    try {
-      String cloudName = "ddrjzbrwp";
-      String uploadPreset = "Smart Dental Care System";
-
-      var uri = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/upload");
-      var request = http.MultipartRequest("POST", uri);
-
-      request.files.add(await http.MultipartFile.fromPath('file', image.path));
-      request.fields['upload_preset'] = uploadPreset;
-
-      var response = await request.send();
-      var responseData = await response.stream.toBytes();
-      var responseString = String.fromCharCodes(responseData);
-      var jsonResponse = jsonDecode(responseString);
-
-      if (response.statusCode == 200) {
-        String url = jsonResponse['secure_url'];
-
-        // تحديث صورة المريض المختار
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.patientId)
-            .update({"profileImage": url});
-
-        if (mounted) Navigator.pop(context); // إخفاء الـ Loading
-        print("Upload successful: $url");
-      } else {
-        if (mounted) Navigator.pop(context);
-        print("Upload failed: ${jsonResponse['error']['message']}");
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      print("Connection error: $e");
-    }
-  }
+  
+  Color toothDefault = Color(0xFF1B263B);
+  Color cavity = Color(0xFFFF4D6D);
+  Color filling = Color(0xFF00E5FF);
+  Color crown = Color(0xFFFFC300);
+  Color healthy = Color(0xFF06D6A0);
+  final List<Map<String, dynamic>> patientTeethData = [
+    {"id": 1, "status": "none"},
+    {"id": 2, "status": "none"},
+    {"id": 3, "status": "healthy"},
+    {"id": 4, "status": "none"},
+    {"id": 5, "status": "none"},
+    {"id": 6, "status": "filling"},
+    {"id": 7, "status": "none"},
+    {"id": 8, "status": "cavity"},
+    {"id": 9, "status": "none"},
+    {"id": 10, "status": "none"},
+    {"id": 11, "status": "filling"},
+    {"id": 12, "status": "none"},
+    {"id": 13, "status": "none"},
+    {"id": 14, "status": "crown"},
+    {"id": 15, "status": "none"},
+    {"id": 16, "status": "none"},
+    {"id": 17, "status": "none"},
+    {"id": 18, "status": "none"},
+    {"id": 19, "status": "cavity"},
+    {"id": 20, "status": "none"},
+    {"id": 21, "status": "none"},
+    {"id": 22, "status": "healthy"},
+    {"id": 23, "status": "none"},
+    {"id": 24, "status": "none"},
+    {"id": 25, "status": "none"},
+    {"id": 26, "status": "none"},
+    {"id": 27, "status": "filling"},
+    {"id": 28, "status": "none"},
+    {"id": 29, "status": "none"},
+    {"id": 30, "status": "crown"},
+    {"id": 31, "status": "none"},
+    {"id": 32, "status": "none"},
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
