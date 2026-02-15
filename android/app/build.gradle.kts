@@ -1,48 +1,61 @@
 plugins {
     id("com.android.application")
+    // يجب أن يكون بلجن Kotlin قبل الفلاتر لضمان التوافق
+    id("kotlin-android")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.smart_dental_care_system"
     compileSdk = flutter.compileSdkVersion
+
+    // يفضل ترك إصدار الـ NDK للفلاتر إلا لو كنت تحتاج إصداراً محدداً جداً
     ndkVersion = flutter.ndkVersion
-    ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // تحديث إلى Java 17 إذا كنت تستخدم إصدارات Flutter حديثة (3.19+)
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        // يجب أن يتطابق مع JavaVersion أعلاه
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.smart_dental_care_system"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+
+        // رفع الـ minSdk لـ 23 ضروري جداً لتوافق Firebase و Exact Alarms
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // إضافة هذا السطر لحل مشاكل الـ Multidex في الإصدارات القديمة
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // تأكد من استبدال هذا لاحقاً بـ signingConfig حقيقي عند رفع التطبيق للمتجر
             signingConfig = signingConfigs.getByName("debug")
+
+            // تحسينات إضافية للنسخة النهائية
+            minifyEnabled = false
+            shrinkResources = false
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // إضافة دعم Multidex إذا واجهت خطأ عند كثرة المكتبات
+    implementation("androidx.multidex:multidex:2.0.1")
 }

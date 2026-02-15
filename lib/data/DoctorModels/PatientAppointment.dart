@@ -1,9 +1,11 @@
+
 class PatientAppointment {
   final String uid;
   final String name;
   final String treatment;
   final String time;
   final int riskScore;
+  final String status;
   final String status; 
 
   PatientAppointment({
@@ -14,5 +16,6 @@ class PatientAppointment {
     required this.riskScore,
     required this.status,
   });
+}
 }
 

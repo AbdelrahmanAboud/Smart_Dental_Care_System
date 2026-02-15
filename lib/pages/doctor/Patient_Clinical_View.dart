@@ -1,13 +1,21 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'package:smart_dental_care_system/pages/doctor/Tooth_Chart.dart';
-import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
 
 final Color bgColor = const Color(0xFF0B1C2D);
 final Color primaryBlue = const Color(0xFF2EC4FF);
 final Color cardColor = const Color(0xFF112B3C);
 
 class PatientClinicalView extends StatefulWidget {
+  final String patientId;
+
+  const PatientClinicalView({super.key, required this.patientId});
+
   @override
   State<PatientClinicalView> createState() => _PatientClinicalViewState();
   final String patientId;
@@ -69,459 +77,271 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
         titleSpacing: 0,
         title: const Text(
           "Patient Profile",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 20,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
 
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: primaryBlue.withOpacity(0.5),
-                            width: 2,
-                          ),
-                        ),
-                        child: const CircleAvatar(
-                          radius: 40,
-                          backgroundImage: AssetImage(
-                            "lib/assets/profile.jpeg",
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
+              // --- الجزء الأول: بيانات البروفايل (StreamBuilder لتحديث الصورة لحظياً) ---
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('users').doc(widget.patientId).snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                      Text(
-                        "3boooood",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        "ID: 12345",
-                        style: TextStyle(
-                          color: primaryBlue.withOpacity(0.8),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  var userData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+                  String? profileUrl = userData['profileImage'];
 
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.phone,
-                              color: primaryBlue,
-                              size: 20,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            "0152345678",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 8),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.email,
-                              color: primaryBlue,
-                              size: 20,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-
-                          Text(
-                            "Aboud123456@gmail.com",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 15),
-
-                Container(
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    ),
                     child: Column(
                       children: [
-                        SizedBox(height: 20),
-
-                        Text(
-                          "Interactive Dental Chart",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
-                        SizedBox(height: 15),
-                        Text(
-                          "Upper Jaw",
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                        SizedBox(height: 15),
-
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        GestureDetector(
+                          onTap: uploadAndSaveImage,
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
                             children: [
-                              for (var i = 0; i < 16; i++)
-                                Padding(
-                                  padding:  EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                  ),
-                                  child: Uppertooth(
-                                    patientTeethData[i]["id"],
-                                    patientTeethData[i]["status"],
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: primaryBlue.withOpacity(0.5), width: 2),
                                 ),
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: bgColor,
+                                  backgroundImage: (profileUrl != null && profileUrl.isNotEmpty)
+                                      ? NetworkImage(profileUrl)
+                                      : const AssetImage("lib/assets/profile.jpeg") as ImageProvider,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(color: primaryBlue, shape: BoxShape.circle),
+                                child: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+                              ),
                             ],
                           ),
                         ),
-                        SizedBox(height: 15),
-
+                        const SizedBox(height: 15),
                         Text(
-                          "Low Jaw",
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          userData['name'] ?? "Unknown Patient",
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: 15),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              for (var i = 16; i < 32; i++)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                  ),
-                                  child: Lowertooth(
-                                    patientTeethData[i]["id"],
-                                    patientTeethData[i]["status"],
-                                  ),
-                                ),
-                            ],
-                          ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "ID: ${userData['id'] ?? 'N/A'}",
+                          style: TextStyle(color: primaryBlue.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w500),
                         ),
-                        SizedBox(height: 15),
-                         Divider(
-                          color: Colors.white10,
-                          indent: 10,
-                          endIndent: 10,
-                        ),
-                        SizedBox(height: 15),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20.0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFFF4D6D),
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Cavity",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 47.0),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFF00E5FF),
-                                            borderRadius: BorderRadius.circular(
-                                              2,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Filling",
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(height: 12),
-
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20.0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFFFC300),
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Crown",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 40.0),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFF06D6A0),
-                                            borderRadius: BorderRadius.circular(
-                                              2,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Healthy",
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(height: 12),
-
-                        Padding(
-                          padding: const EdgeInsets.only(left: 18.0, right: 18),
-                          child: SizedBox(
-                            width: double.infinity,
-
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: primaryBlue, width: 1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>Toothchart()));
-                              },
-                              child: Text(
-                                "View Detailed Chart ",
-                                style: TextStyle(
-                                  color: primaryBlue,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 15),
+                        _buildContactInfo(Icons.phone, userData['phone'] ?? "No Phone"),
+                        const SizedBox(height: 8),
+                        _buildContactInfo(Icons.email, userData['email'] ?? "No Email"),
                       ],
                     ),
-                  ),
-                ),
-                SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryBlue,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                        onPressed: () {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (context)=>TreatmentPlan()));
-                              },
-                    child:  Text(
-                      "Start New Treatment",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+                  );
+                },
+              ),
 
-                const SizedBox(height: 12),
+              const SizedBox(height: 15),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: primaryBlue, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+              // --- الجزء الثاني: جلب بيانات الرسم البياني للأسنان ---
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('patients').doc(widget.patientId).snapshots(),
+                builder: (context, snapshot) {
+                  Map<String, String> teethStates = {};
+
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    var data = snapshot.data!.data() as Map<String, dynamic>;
+                    if (data.containsKey('teeth_chart')) {
+                      var chart = data['teeth_chart'] as Map<String, dynamic>;
+                      chart.forEach((key, value) {
+                        teethStates[key] = value['status'] ?? "none";
+                      });
+                    }
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 10, spreadRadius: 2),
+                      ],
                     ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PatientRecord(),
+                    child: Column(
+                      children: [
+                        const Text("Interactive Dental Chart", style: TextStyle(fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 15),
+                        const Text("Upper Jaw", style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        const SizedBox(height: 15),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (var i = 1; i <= 16; i++)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Uppertooth(i, teethStates[i.toString()] ?? "none"),
+                                ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                    child: Text(
-                      "View Records",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                      ),
+                        const SizedBox(height: 15),
+                        const Text("Low Jaw", style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        const SizedBox(height: 15),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (var i = 17; i <= 32; i++)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Lowertooth(i, teethStates[i.toString()] ?? "none"),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildLegend(),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: primaryBlue),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) => Toothchart(patientId: widget.patientId),
+                                ));
+                              },
+                              child: Text("View Detailed Chart", style: TextStyle(color: primaryBlue)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                SizedBox(height: 20),
-              ],
-            ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- أزرار الإجراءات ---
+              _buildActionButton("Start New Treatment", primaryBlue, Colors.black, () {
+                // Future treatment plan integration
+              }),
+
+              const SizedBox(height: 12),
+
+              _buildActionButton("View Records", Colors.transparent, primaryBlue, () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => PatientRecord(),
+                ));
+              }, isOutlined: true),
+
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildContactInfo(IconData icon, String text) {
+    return  Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: primaryBlue, size: 20),
+          const SizedBox(width: 6),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        ],
+
+    );
+  }
+
+  Widget _buildActionButton(String title, Color bg, Color text, VoidCallback onTap, {bool isOutlined = false}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: isOutlined
+          ? OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: bg, width: 2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        onPressed: onTap,
+        child: Text(title, style: TextStyle(fontSize: 16, color: text, fontWeight: FontWeight.bold)),
+      )
+          : ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        onPressed: onTap,
+        child: Text(title, style: TextStyle(fontSize: 16, color: text, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildLegend() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _legendItem("Cavity", const Color(0xFFFF4D6D)),
+            _legendItem("Filling", const Color(0xFF00E5FF)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _legendItem("Crown", const Color(0xFFFFC300)),
+            _legendItem("Healthy", const Color(0xFF06D6A0)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _legendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      ],
+    );
+  }
 }
 
+// --- ويدجت الأسنان ---
 Widget Uppertooth(int number, String status) {
-  Color toothDefault = Color(0xFF1B263B);
-  Color cavity = Color(0xFFFF4D6D);
-  Color filling = Color(0xFF00E5FF);
-  Color crown = Color(0xFFFFC300);
-  Color healthy = Color(0xFF06D6A0);
-  Color color = toothDefault;
-  if (status == "cavity") {
-    color = cavity;
-  } else if (status == "filling") {
-    color = filling;
-  } else if (status == "crown") {
-    color = crown;
-  } else if (status == "healthy") {
-    color = healthy;
-  }
+  Color color = _getToothColor(status);
   return Column(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -530,47 +350,22 @@ Widget Uppertooth(int number, String status) {
         height: 40,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(10),
-            topRight: Radius.circular(10),
-            bottomLeft: Radius.circular(2),
-            bottomRight: Radius.circular(2),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(10), topRight: Radius.circular(10),
           ),
           boxShadow: [
-            if (color != toothDefault)
-              BoxShadow(
-                color: color.withOpacity(0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
+            if (status != "none") BoxShadow(color: color.withOpacity(0.5), blurRadius: 10, spreadRadius: 2),
           ],
         ),
       ),
-            SizedBox(height: 4),
+      const SizedBox(height: 4),
       Text("$number", style: TextStyle(color: Colors.grey[600], fontSize: 10)),
-
     ],
   );
 }
 
 Widget Lowertooth(int number, String status) {
-  Color toothDefault = Color(0xFF1B263B);
-  Color cavity = Color(0xFFFF4D6D);
-  Color filling = Color(0xFF00E5FF);
-  Color crown = Color(0xFFFFC300);
-  Color healthy = Color(0xFF06D6A0);
-  Color color = toothDefault;
-
-  if (status == "cavity") {
-    color = cavity;
-  } else if (status == "filling") {
-    color = filling;
-  } else if (status == "crown") {
-    color = crown;
-  } else if (status == "healthy") {
-    color = healthy;
-  }
-
+  Color color = _getToothColor(status);
   return Column(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -579,24 +374,26 @@ Widget Lowertooth(int number, String status) {
         height: 40,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(2),
-            topRight: Radius.circular(2),
-            bottomLeft: Radius.circular(10), 
-            bottomRight: Radius.circular(10), 
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10),
           ),
           boxShadow: [
-            if (color != toothDefault)
-              BoxShadow(
-                color: color.withOpacity(0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
+            if (status != "none") BoxShadow(color: color.withOpacity(0.5), blurRadius: 10, spreadRadius: 2),
           ],
         ),
       ),
-      SizedBox(height: 4),
+      const SizedBox(height: 4),
       Text("$number", style: TextStyle(color: Colors.grey[600], fontSize: 10)),
     ],
   );
+}
+
+Color _getToothColor(String status) {
+  switch (status) {
+    case "cavity": return const Color(0xFFFF4D6D);
+    case "filling": return const Color(0xFF00E5FF);
+    case "crown": return const Color(0xFFFFC300);
+    case "healthy": return const Color(0xFF06D6A0);
+    default: return const Color(0xFF1B263B);
+  }
 }

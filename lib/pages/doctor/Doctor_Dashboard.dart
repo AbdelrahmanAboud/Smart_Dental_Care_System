@@ -197,26 +197,26 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               ),
         title: isSearching
             ? TextField(
-                controller: searchController,
-                autofocus: true,
-                style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "Search patient name...",
-                  hintStyle: TextStyle(color: Colors.white38, fontSize: 16),
-                  border: InputBorder.none,
-                ),
-                onChanged: filterSearch,
-              )
+          controller: searchController,
+          autofocus: true,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: "Search patient name...",
+            hintStyle: TextStyle(color: Colors.white38, fontSize: 16),
+            border: InputBorder.none,
+          ),
+          onChanged: filterSearch,
+        )
             : null,
         actions: [
           isSearching
               ? IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: () {
-                    searchController.clear();
-                    filterSearch("");
-                  },
-                )
+            icon: Icon(Icons.close, color: Colors.white),
+            onPressed: () {
+              searchController.clear();
+              filterSearch("");
+            },
+          )
               : IconButton(
                   onPressed: () => setState(() => isSearching = true),
                   icon: Icon(
@@ -273,31 +273,14 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          gridItems[index]["icon"],
-                          color: gridItems[index]["color"],
-                          size: 20,
-                        ),
+                        Icon(gridItems[index]["icon"], color: gridItems[index]["color"], size: 20),
                         SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              gridItems[index]["title"],
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              gridItems[index]["value"],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            Text(gridItems[index]["title"], style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            Text(gridItems[index]["value"], style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
@@ -388,14 +371,8 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0, top: 10),
               child: Text(
-                isSearching
-                    ? "Search Results (${filteredAppointments.length})"
-                    : "Today's Appointments",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                isSearching ? "Search Results (${filteredAppointments.length})" : "Today's Appointments",
+                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(
