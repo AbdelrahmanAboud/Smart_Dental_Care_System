@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/DoctorModels/PatientAppointment.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Analytics.dart';
+import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Emergency_Alerts.dart';
 import 'package:smart_dental_care_system/Globale.Data.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
@@ -24,7 +25,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   bool isLoading = true;
 
   late Stream<QuerySnapshot> _emergencyStream;
-
 
   @override
   void initState() {
@@ -153,6 +153,12 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               );
               break;
             case 2:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => DoctorAvailableSlots()),
+              );
+              break;
+            case 3:
               break;
           }
         },
@@ -161,6 +167,10 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
             label: "Analytics",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event_available),
+            label: "Slots",
           ),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
         ],
@@ -198,26 +208,26 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               ),
         title: isSearching
             ? TextField(
-          controller: searchController,
-          autofocus: true,
-          style: TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: "Search patient name...",
-            hintStyle: TextStyle(color: Colors.white38, fontSize: 16),
-            border: InputBorder.none,
-          ),
-          onChanged: filterSearch,
-        )
+                controller: searchController,
+                autofocus: true,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: "Search patient name...",
+                  hintStyle: TextStyle(color: Colors.white38, fontSize: 16),
+                  border: InputBorder.none,
+                ),
+                onChanged: filterSearch,
+              )
             : null,
         actions: [
           isSearching
               ? IconButton(
-            icon: Icon(Icons.close, color: Colors.white),
-            onPressed: () {
-              searchController.clear();
-              filterSearch("");
-            },
-          )
+                  icon: Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    searchController.clear();
+                    filterSearch("");
+                  },
+                )
               : IconButton(
                   onPressed: () => setState(() => isSearching = true),
                   icon: Icon(
@@ -274,14 +284,31 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                     ),
                     child: Row(
                       children: [
-                        Icon(gridItems[index]["icon"], color: gridItems[index]["color"], size: 20),
+                        Icon(
+                          gridItems[index]["icon"],
+                          color: gridItems[index]["color"],
+                          size: 20,
+                        ),
                         SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(gridItems[index]["title"], style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text(gridItems[index]["value"], style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text(
+                              gridItems[index]["title"],
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              gridItems[index]["value"],
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -290,7 +317,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                 },
               ),
               StreamBuilder<QuerySnapshot>(
-                stream: _emergencyStream, 
+                stream: _emergencyStream,
                 builder: (context, snapshot) {
                   int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
                   var lastEmergency = count > 0
@@ -372,8 +399,14 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0, top: 10),
               child: Text(
-                isSearching ? "Search Results (${filteredAppointments.length})" : "Today's Appointments",
-                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                isSearching
+                    ? "Search Results (${filteredAppointments.length})"
+                    : "Today's Appointments",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             Expanded(
@@ -381,9 +414,29 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                   ? Center(child: CircularProgressIndicator(color: primaryBlue))
                   : filteredAppointments.isEmpty
                   ? Center(
-                      child: Text(
-                        "No patients found",
-                        style: TextStyle(color: Colors.white38),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            FontAwesomeIcons.calendarCheck,
+                            size: 60,
+                            color: Colors.white10,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            "No patients found for today",
+                            style: TextStyle(color: Colors.white38),
+                          ),
+                          Text(
+                            isSearching
+                                ? "Try searching for another name"
+                                : "Your schedule is clear!",
+                            style: TextStyle(
+                              color: Colors.white24,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(

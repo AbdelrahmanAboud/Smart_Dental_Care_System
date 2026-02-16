@@ -30,34 +30,49 @@ class _PatientHomeState extends State<PatientHome> {
     fetchData();
   }
 
-  fetchData() async {
-    String uid = FirebaseAuth.instance.currentUser!.uid;
+ fetchData() async {
+  String uid = FirebaseAuth.instance.currentUser!.uid;
 
-    DocumentSnapshot doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+  DocumentSnapshot doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .get();
 
-    DocumentSnapshot apptDoc = await FirebaseFirestore.instance
-        .collection('appointments')
-        .doc(uid)
-        .get();
+  DocumentSnapshot apptDoc = await FirebaseFirestore.instance
+      .collection('appointments')
+      .doc(uid)
+      .get();
 
+  if (mounted) { // تأكد إن الـ Widget لسه موجودة في الـ memory
     setState(() {
-      userData = doc.data() as Map<String, dynamic>;
+      userData = doc.data() as Map<String, dynamic>?;
 
       if (apptDoc.exists) {
         hasBooking = true;
         appointmentId = uid;
         var data = apptDoc.data() as Map<String, dynamic>;
-        DateTime date = (data['date'] as Timestamp).toDate();
-        String slot = data['slot'];
-        appointmentInfo = "${DateFormat('EEEE, dd MMM').format(date)} at $slot";
+        
+        DateTime? date;
+        // فحص نوع البيانات عشان نتجنب الـ Error
+        if (data['date'] is Timestamp) {
+          date = (data['date'] as Timestamp).toDate();
+        } else if (data['date'] is String) {
+          date = DateTime.tryParse(data['date']); // لو متخزن نص، بنحاول نحوله لـ DateTime
+        }
+
+        String slot = data['slot'] ?? "";
+        
+        if (date != null) {
+          appointmentInfo = "${DateFormat('EEEE, dd MMM').format(date)} at $slot";
+        } else {
+          appointmentInfo = "Date format error at $slot";
+        }
       }
 
       isLoading = false;
     });
   }
+}
 
   final List<Map<String, dynamic>> quickAccessItems = [
     {"icon": FontAwesomeIcons.book, "title": "Book"},
