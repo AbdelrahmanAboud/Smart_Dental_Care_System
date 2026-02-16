@@ -26,7 +26,7 @@ void main() async {
 
   );
   testFirestore();
-  NotificationHelper.showInstantNotification();
+  // NotificationHelper.showInstantNotification();
   runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,

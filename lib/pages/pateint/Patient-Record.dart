@@ -56,8 +56,11 @@ class _PatientRrecordState extends State<PatientRecord> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+ onPressed: () {
+            Navigator.of(
+              context,
+            ).pop();
+          },        ),
       ),
       body: SingleChildScrollView(
         child: Column(

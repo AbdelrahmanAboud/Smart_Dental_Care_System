@@ -25,6 +25,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
 
   late Stream<QuerySnapshot> _emergencyStream;
 
+
   @override
   void initState() {
     super.initState();

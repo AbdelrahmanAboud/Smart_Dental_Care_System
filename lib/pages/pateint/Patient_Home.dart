@@ -10,6 +10,7 @@ import 'package:smart_dental_care_system/pages/pateint/Habit_Tracker.dart';
 import 'package:smart_dental_care_system/pages/pateint/Risk_Score.dart';
 import 'package:smart_dental_care_system/pages/pateint/pateint_profile.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
+import 'package:smart_dental_care_system/pages/pateint/Patient_Treatment.dart';
 
 class PatientHome extends StatefulWidget {
   @override
@@ -63,6 +64,7 @@ class _PatientHomeState extends State<PatientHome> {
     {"icon": FontAwesomeIcons.clipboardList, "title": "Records"},
     {"icon": FontAwesomeIcons.chartLine, "title": "Risk Score"},
     {"icon": FontAwesomeIcons.chartBar, "title": "Habit Tracker "},
+    {"icon": FontAwesomeIcons.pills, "title": "My Treatment"},
   ];
   String appointmentInfo = "No upcoming appointments";
   bool hasBooking = false;
@@ -97,7 +99,7 @@ class _PatientHomeState extends State<PatientHome> {
         titleSpacing: 0,
 
         title: Padding(
-          padding: const EdgeInsets.only(left: 20.0),
+          padding:  EdgeInsets.only(left: 20.0),
           child: Text(
             "Patient Home",
             style: TextStyle(
@@ -504,16 +506,16 @@ class _PatientHomeState extends State<PatientHome> {
               ),
             ),
 
-            const SizedBox(height: 12),
+             SizedBox(height: 12),
 
             Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+              padding:  EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
                 height: 55,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: const Color(0xFF112B3C),
+                    backgroundColor:  Color(0xFF112B3C),
                     side: const BorderSide(color: Color(0xFF00D2FF), width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
@@ -542,6 +544,8 @@ class _PatientHomeState extends State<PatientHome> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+
             const SizedBox(height: 12),
 
             Padding(
@@ -736,7 +740,7 @@ class _PatientHomeState extends State<PatientHome> {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: 4,
+                itemCount: quickAccessItems.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
@@ -801,6 +805,16 @@ class _PatientHomeState extends State<PatientHome> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => HabitTracker()),
+              );
+              break;
+            case 4:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PatientTreatmentPage(
+                    patientUid: FirebaseAuth.instance.currentUser?.uid,
+                  ),
+                ),
               );
               break;
           }

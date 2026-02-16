@@ -25,7 +25,6 @@ class _RemindersScreenState extends State<PatientReminders> {
     _setupNotifications();
   }
 
-  // دالة لتهيئة الإشعارات ثم بدء الاستماع للبيانات
   Future<void> _setupNotifications() async {
     await NotificationHelper.init();
     _listenAndScheduleReminders();
@@ -94,8 +93,12 @@ class _RemindersScreenState extends State<PatientReminders> {
         elevation: 0,
         backgroundColor: bgColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
+          icon:  Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).pop();
+          },
         ),
         title: const Text(
           "My Reminders",

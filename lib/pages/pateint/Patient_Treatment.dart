@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class PatientTreatmentPage extends StatefulWidget {
-  final List<Map<String, dynamic>> medications;
-  final List<Map<String, dynamic>> instructions;
+  final String? patientUid;
 
-  PatientTreatmentPage({required this.medications, required this.instructions});
+  final List<Map<String, dynamic>>? medications;
+  final List<Map<String, dynamic>>? instructions;
+
+  PatientTreatmentPage({this.patientUid, this.medications, this.instructions});
 
   @override
   _PatientTreatmentPageState createState() => _PatientTreatmentPageState();
@@ -12,37 +16,157 @@ class PatientTreatmentPage extends StatefulWidget {
 
 class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
   final Color bgColor = const Color(0xFF0B1C2D);
-  final Color primaryBlue = const Color(0xFF2EC4FF);
+  final Color primaryBlue = const Color.fromARGB(255, 30, 91, 115);
   final Color cardColor = const Color(0xFF112B3C);
-  final Color greenAccent = const Color(0xFF00E676);
+
+  List<Map<String, dynamic>>? _loadedMedications;
+  List<Map<String, dynamic>>? _loadedInstructions;
+  bool _isLoading = true;
+  bool _hasNoData = false;
+
+  List<Map<String, dynamic>> get _effectiveMedications =>
+      _loadedMedications ?? _effectiveMedications ?? [];
+  List<Map<String, dynamic>> get _effectiveInstructions =>
+      _loadedInstructions ?? _effectiveInstructions ?? [];
+
+  static int _instructionDurationDays(String? duration) {
+    if (duration == null) return 7;
+    final d = duration.toLowerCase();
+    if (d.contains('24') || d == '24 hours') return 1;
+    if (d.contains('48')) return 2;
+    if (d.contains('72')) return 3;
+    if (d.contains('week') || d.contains('1 week')) return 7;
+    return 7;
+  }
 
   @override
   void initState() {
     super.initState();
-    for (var med in widget.medications) {
+    if (widget.patientUid != null) {
+      _loadFromFirestore();
+      return;
+    }
+    _isLoading = false;
+    final meds = _effectiveMedications ?? [];
+    final inst = _effectiveInstructions ?? [];
+    for (var med in meds) {
       if (!med.containsKey('taken')) {
-        med['taken'] = List<bool>.filled(med['times'].length, false);
+        med['taken'] = List<bool>.filled((med['times'] as List).length, false);
       }
       if (!med.containsKey('completionPercentage')) {
         med['completionPercentage'] = 0.0;
       }
     }
-
-    for (var inst in widget.instructions) {
-      if (!inst.containsKey('completed')) {
-        inst['completed'] = false;
-      }
+    for (var inst in inst) {
+      if (!inst.containsKey('completed')) inst['completed'] = false;
     }
   }
 
-  double get overallProgress {
-    if (widget.medications.isEmpty && widget.instructions.isEmpty) return 0.0;
+  Future<void> _loadFromFirestore() async {
+    final uid = widget.patientUid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _hasNoData = true;
+      });
+      return;
+    }
+    final doc = await FirebaseFirestore.instance
+        .collection('patient_treatments')
+        .doc(uid)
+        .get();
+    if (!mounted) return;
+    if (!doc.exists) {
+      setState(() {
+        _isLoading = false;
+        _hasNoData = true;
+      });
+      return;
+    }
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final pushedAt = data['pushedAt'] is Timestamp
+        ? (data['pushedAt'] as Timestamp).toDate()
+        : DateTime.now();
+    final now = DateTime.now();
 
+    final medsRaw = data['medications'] as List<dynamic>? ?? [];
+    final instRaw = data['instructions'] as List<dynamic>? ?? [];
+
+    final allMeds = medsRaw.map((m) {
+      final map = Map<String, dynamic>.from(m as Map);
+      if (map['startDate'] is Timestamp) {
+        map['startDate'] = (map['startDate'] as Timestamp).toDate();
+      }
+      if (!map.containsKey('taken') && map['times'] != null) {
+        map['taken'] = List<bool>.filled((map['times'] as List).length, false);
+      }
+      if (!map.containsKey('completionPercentage')) {
+        map['completionPercentage'] = 0.0;
+      }
+      return map;
+    }).toList();
+
+    final activeMeds = allMeds.where((med) {
+      final start = med['startDate'] as DateTime?;
+      final days = med['duration'] is int ? med['duration'] as int : 0;
+      if (start == null) return true;
+      final endDate = start.add(Duration(days: days));
+      return now.isBefore(endDate);
+    }).toList();
+
+    final allInst = instRaw.map((i) {
+      final map = Map<String, dynamic>.from(i as Map);
+      if (!map.containsKey('completed')) map['completed'] = false;
+      return map;
+    }).toList();
+
+    final activeInst = allInst.where((inst) {
+      final days = _instructionDurationDays(inst['duration'] as String?);
+      final endDate = pushedAt.add(Duration(days: days));
+      return now.isBefore(endDate);
+    }).toList();
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      if (activeMeds.isEmpty && activeInst.isEmpty) {
+        _hasNoData = true;
+      } else {
+        _loadedMedications = activeMeds;
+        _loadedInstructions = activeInst;
+      }
+    });
+  }
+
+  Future<void> _saveProgressToFirestore() async {
+    final uid = widget.patientUid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final medsForFirestore = _effectiveMedications.map((m) {
+        final map = Map<String, dynamic>.from(m);
+        if (map['startDate'] is DateTime) {
+          map['startDate'] = Timestamp.fromDate(map['startDate'] as DateTime);
+        }
+        return map;
+      }).toList();
+      await FirebaseFirestore.instance
+          .collection('patient_treatments')
+          .doc(uid)
+          .update({
+            'medications': medsForFirestore,
+            'instructions': _effectiveInstructions,
+          });
+    } catch (_) {}
+  }
+
+  double get overallProgress {
+    if (_effectiveMedications.isEmpty && _effectiveInstructions.isEmpty)
+      return 0.0;
     double medProgress = 0.0;
     double instProgress = 0.0;
-
-    if (widget.medications.isNotEmpty) {
-      for (var med in widget.medications) {
+    if (_effectiveMedications.isNotEmpty) {
+      for (var med in _effectiveMedications) {
         List<bool> takenList = List<bool>.from(med['taken']);
         int takenCount = takenList.where((t) => t).length;
         med['completionPercentage'] = takenList.isEmpty
@@ -50,37 +174,91 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
             : (takenCount / takenList.length);
         medProgress += med['completionPercentage'];
       }
-      medProgress = medProgress / widget.medications.length;
+      medProgress = medProgress / _effectiveMedications.length;
     }
-
-    if (widget.instructions.isNotEmpty) {
-      int completedInst = widget.instructions
+    if (_effectiveInstructions.isNotEmpty) {
+      int completedInst = _effectiveInstructions
           .where((inst) => inst['completed'] == true)
           .length;
-      instProgress = completedInst / widget.instructions.length;
+      instProgress = completedInst / _effectiveInstructions.length;
     }
-
-    if (widget.medications.isEmpty) return instProgress;
-    if (widget.instructions.isEmpty) return medProgress;
-
+    if (_effectiveMedications.isEmpty) return instProgress;
+    if (_effectiveInstructions.isEmpty) return medProgress;
     return (medProgress + instProgress) / 2;
   }
 
   Map<String, int> get todayMedicationStats {
     int takenCount = 0;
     int totalCount = 0;
-
-    for (var med in widget.medications) {
+    for (var med in _effectiveMedications) {
       List<bool> takenList = List<bool>.from(med['taken']);
       takenCount += takenList.where((t) => t).length;
       totalCount += takenList.length;
     }
-
     return {'taken': takenCount, 'total': totalCount};
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        appBar: AppBar(
+          titleSpacing: 0,
+          backgroundColor: bgColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            "Treatment Progress",
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+        body: Center(child: CircularProgressIndicator(color: primaryBlue)),
+      );
+    }
+    if (_hasNoData) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        appBar: AppBar(
+          titleSpacing: 0,
+          backgroundColor: bgColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            "My Treatment",
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.medication_outlined,
+                  size: 64,
+                  color: Colors.white24,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "No active treatment plan at the moment",
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     var medStats = todayMedicationStats;
     int takenToday = medStats['taken']!;
     int totalToday = medStats['total']!;
@@ -181,7 +359,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildStatItem(
-                        widget.medications.length.toString(),
+                        _effectiveMedications.length.toString(),
                         "Medications",
                         Icons.medication,
                         primaryBlue,
@@ -193,7 +371,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                         Colors.green,
                       ),
                       _buildStatItem(
-                        widget.instructions.length.toString(),
+                        _effectiveInstructions.length.toString(),
                         "Instructions",
                         Icons.info,
                         Colors.orange,
@@ -206,7 +384,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
 
             SizedBox(height: 20),
 
-            if (widget.medications.isNotEmpty)
+            if (_effectiveMedications.isNotEmpty)
               Container(
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -260,7 +438,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                     SizedBox(height: 15),
 
                     Column(
-                      children: widget.medications.map((med) {
+                      children: _effectiveMedications.map((med) {
                         List<String> times = List<String>.from(med['times']);
                         List<bool> taken = List<bool>.from(med['taken']);
                         double medProgress = med['completionPercentage'];
@@ -395,29 +573,29 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                                 child: Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
-                                  
+
                                   children: times.asMap().entries.map((
                                     timeEntry,
                                   ) {
                                     int timeIndex = timeEntry.key;
                                     String time = timeEntry.value;
                                     bool isTaken = taken[timeIndex];
-                                
+
                                     return GestureDetector(
                                       onTap: () {
                                         setState(() {
                                           taken[timeIndex] = !isTaken;
                                           med['taken'] = taken;
-                                
+
                                           int takenCount = taken
                                               .where((t) => t)
                                               .length;
                                           med['completionPercentage'] =
                                               takenCount / taken.length;
                                         });
+                                        _saveProgressToFirestore();
                                       },
                                       child: Container(
-                                        
                                         padding: EdgeInsets.symmetric(
                                           horizontal: 7,
                                           vertical: 8,
@@ -425,12 +603,14 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                                         decoration: BoxDecoration(
                                           color: isTaken
                                               ? Colors.green.withOpacity(0.3)
-                                              :  primaryBlue.withOpacity(0.1), 
-                                          borderRadius: BorderRadius.circular(20),
+                                              : primaryBlue.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                           border: Border.all(
                                             color: isTaken
                                                 ? Colors.green
-                                                :  primaryBlue.withOpacity(0.1), 
+                                                : primaryBlue.withOpacity(0.1),
                                             width: 1.5,
                                           ),
                                           boxShadow: isTaken
@@ -487,7 +667,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
 
             SizedBox(height: 20),
 
-            if (widget.instructions.isNotEmpty)
+            if (_effectiveInstructions.isNotEmpty)
               Container(
                 padding: EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -511,7 +691,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                         ),
                         Spacer(),
                         Text(
-                          "${widget.instructions.where((inst) => inst['completed'] == true).length}/${widget.instructions.length}",
+                          "${_effectiveInstructions.where((inst) => inst['completed'] == true).length}/${_effectiveInstructions.length}",
                           style: TextStyle(
                             color: primaryBlue,
                             fontSize: 14,
@@ -523,7 +703,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
 
                     SizedBox(height: 15),
 
-                    ...widget.instructions.asMap().entries.map((entry) {
+                    ..._effectiveInstructions.asMap().entries.map((entry) {
                       int index = entry.key;
                       var instruction = entry.value;
                       bool isCompleted = instruction['completed'] == true;
@@ -533,6 +713,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                           setState(() {
                             instruction['completed'] = !isCompleted;
                           });
+                          _saveProgressToFirestore();
                         },
                         child: Container(
                           margin: EdgeInsets.only(bottom: 10),
@@ -686,16 +867,16 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                                 SizedBox(
                                   width: 100,
                                   child: LinearProgressIndicator(
-                                    value: widget.instructions.isEmpty
+                                    value: _effectiveInstructions.isEmpty
                                         ? 0
-                                        : widget.instructions
+                                        : _effectiveInstructions
                                                   .where(
                                                     (inst) =>
                                                         inst['completed'] ==
                                                         true,
                                                   )
                                                   .length /
-                                              widget.instructions.length,
+                                              _effectiveInstructions.length,
                                     backgroundColor: Colors.white12,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       primaryBlue,
@@ -706,7 +887,7 @@ class _PatientTreatmentPageState extends State<PatientTreatmentPage> {
                                 ),
                                 SizedBox(width: 10),
                                 Text(
-                                  "${(widget.instructions.where((inst) => inst['completed'] == true).length / widget.instructions.length * 100).toStringAsFixed(0)}%",
+                                  "${(_effectiveInstructions.where((inst) => inst['completed'] == true).length / _effectiveInstructions.length * 100).toStringAsFixed(0)}%",
                                   style: TextStyle(
                                     color: primaryBlue,
                                     fontSize: 12,

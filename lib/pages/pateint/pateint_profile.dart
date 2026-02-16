@@ -115,16 +115,16 @@ class _PateintProfileState extends State<PateintProfile> {
               child: Stack(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    padding:  EdgeInsets.all(4),
+                    decoration:  BoxDecoration(
+                      color: cardColor,
                       shape: BoxShape.circle,
                     ),
                     child: imageUrl.isEmpty
-                        ? const CircleAvatar(
+                        ? CircleAvatar(
                             radius: 65,
-                            backgroundColor: Colors.white,
-                            backgroundImage: AssetImage(
+                            backgroundColor: cardColor,
+                            backgroundImage:  AssetImage(
                               "lib/assets/user_logo.png",
                             ),
                           )
@@ -133,6 +133,7 @@ class _PateintProfileState extends State<PateintProfile> {
                             imageBuilder: (context, imageProvider) =>
                                 CircleAvatar(
                                   radius: 65,
+                                  backgroundColor:cardColor ,
                                   backgroundImage: imageProvider,
                                 ),
 
@@ -140,7 +141,7 @@ class _PateintProfileState extends State<PateintProfile> {
                               radius: 65,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: primaryBlue,
+                                backgroundColor: cardColor,
                               ),
                             ),
                             errorWidget: (context, url, error) =>

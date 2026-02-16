@@ -71,4 +71,29 @@ class DatabaseService {
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
+  Future<void> updateToothStatus({
+    required String patientId,
+    required int toothNumber,
+    required String status,
+    required String notes,
+  }) async {
+    try {
+      await db.collection('patients').doc(patientId).set({
+        'teeth_chart': {
+          toothNumber.toString(): {
+            'status': status,
+            'notes': notes,
+            'lastUpdate': FieldValue.serverTimestamp(),
+          }
+        }
+      }, SetOptions(merge: true)); // merge: true عشان يحافظ على باقي السنان وميمسحهاش
+    } catch (e) {
+      print("Error updating tooth: $e");
+    }
+  }
+
+  // جلب بيانات السنان للمريض بشكل لحظي
+  Stream<DocumentSnapshot> getTeethStream(String patientId) {
+    return db.collection('patients').doc(patientId).snapshots();
+  }
 }

@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    // يجب أن يكون بلجن Kotlin قبل الفلاتر لضمان التوافق
     id("kotlin-android")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
@@ -12,41 +11,52 @@ android {
     namespace = "com.example.smart_dental_care_system"
     compileSdk = flutter.compileSdkVersion
 
-    // يفضل ترك إصدار الـ NDK للفلاتر إلا لو كنت تحتاج إصداراً محدداً جداً
-    ndkVersion = flutter.ndkVersion
+    // 1. حل مشكلة الـ NDK المطلوبة من مكتبات Firebase
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
-        // تحديث إلى Java 17 إذا كنت تستخدم إصدارات Flutter حديثة (3.19+)
+        // 2. تفعيل الـ Desugaring لحل مشكلة flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
+        
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        // يجب أن يتطابق مع JavaVersion أعلاه
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
         applicationId = "com.example.smart_dental_care_system"
 
-        // رفع الـ minSdk لـ 23 ضروري جداً لتوافق Firebase و Exact Alarms
+        // رفع الـ minSdk ضروري لعمل الـ Desugaring و Firebase
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // إضافة هذا السطر لحل مشاكل الـ Multidex في الإصدارات القديمة
         multiDexEnabled = true
     }
 
     buildTypes {
-        release {
-            // تأكد من استبدال هذا لاحقاً بـ signingConfig حقيقي عند رفع التطبيق للمتجر
+        getByName("release") {
+            // استخدام الـ debug key مؤقتاً للتشغيل
             signingConfig = signingConfigs.getByName("debug")
 
-            // تحسينات إضافية للنسخة النهائية
-            minifyEnabled = false
-            shrinkResources = false
+            // تصحيح المسميات لصيغة Kotlin DSL
+            isMinifyEnabled = false
+            isShrinkResources = false
+            
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
@@ -56,6 +66,8 @@ flutter {
 }
 
 dependencies {
-    // إضافة دعم Multidex إذا واجهت خطأ عند كثرة المكتبات
+    // 3. المكتبة الضرورية لعمل الـ Desugaring (Java 8 support)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
     implementation("androidx.multidex:multidex:2.0.1")
 }

@@ -8,12 +8,9 @@ class NotificationHelper {
   // ⚡ تهيئة الإشعارات
   static Future<void> init() async {
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.local); // ضبط التوقيت المحلي
-
-    const AndroidInitializationSettings androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings settings = InitializationSettings(
+    tz.setLocalLocation(tz.local); 
+AndroidInitializationSettings androidSettings = const AndroidInitializationSettings('launch_background');
+     InitializationSettings settings = InitializationSettings(
       android: androidSettings,
       iOS: DarwinInitializationSettings(),
     );
@@ -49,6 +46,7 @@ class NotificationHelper {
           channelDescription: 'Reminder notifications',
           importance: Importance.max,
           priority: Priority.high,
+          icon: 'launch_background',
           playSound: true,
           enableVibration: true,
         ),
@@ -93,6 +91,7 @@ class NotificationHelper {
           channelDescription: 'Reminder notifications',
           importance: Importance.max,
           priority: Priority.high,
+          icon: 'launch_background',
           playSound: true,
           enableVibration: true,
         ),

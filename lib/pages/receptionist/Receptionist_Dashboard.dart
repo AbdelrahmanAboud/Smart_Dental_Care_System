@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+// تأكد من صحة المسارات دي عندك في المشروع
+import 'package:smart_dental_care_system/data/DoctorModels/PatientAppointment.dart';
 import 'package:smart_dental_care_system/data/PateintModels/AvailableDay.dart';
 import 'package:smart_dental_care_system/data/receptionistModels/Appointment_Model.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Billing%20.dart';
@@ -14,15 +17,21 @@ final Color cardColor = const Color(0xFF112B3C);
 
 class ReceptionistDashboard extends StatefulWidget {
   @override
-  State<ReceptionistDashboard> createState() => _SchedulepageState();
+  State<ReceptionistDashboard> createState() => _ReceptionistDashboardState();
 }
 
-class _SchedulepageState extends State<ReceptionistDashboard> {
+class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
+  // توحيد القوائم لتجنب الأخطاء
+  List<AppointmentModel> allTodayAppointments = [];
+  List<AppointmentModel> filteredList = [];
+  bool isLoading = true;
   late Timer _timer;
   String _currentTime = "";
   TextEditingController _searchController = TextEditingController();
-  List<AppointmentModel> filteredList = [];
   bool _isSearching = false;
+
+  // قائمة وهمية للأيام المتاحة (تأكد من تعريفها أو جلبها من الداتا)
+  List<AvailableDay> availabledays = []; 
 
   @override
   void initState() {
@@ -31,7 +40,7 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       _updateTime();
     });
-    filteredList = appointmentList;
+    fetchData();
   }
 
   @override
@@ -51,9 +60,43 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
     });
   }
 
+  fetchData() async {
+    setState(() => isLoading = true);
+
+    DateTime now = DateTime.now();
+    DateTime start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    try {
+      var snapshot = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .get();
+
+      setState(() {
+        allTodayAppointments = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          return AppointmentModel(
+            patientName: data['patientName'] ?? 'Unknown',
+            appointmentTime: data['slot'] ?? '',
+            treatmentType: data['treatment'] ?? '',
+            status: data['status'] ?? "pending",
+          );
+        }).toList();
+
+        filteredList = allTodayAppointments;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching data: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
   void _filterSearch(String query) {
     setState(() {
-      filteredList = appointmentList
+      filteredList = allTodayAppointments
           .where((item) => item.patientName.toLowerCase().contains(query.toLowerCase()))
           .toList();
     });
@@ -174,8 +217,8 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
                             child: ElevatedButton(
                               onPressed: () {
                                 setState(() {
-                                  int originalIndex = appointmentList.indexOf(filteredList[index]);
-                                  appointmentList[originalIndex] = AppointmentModel(
+                                  int originalIndex = allTodayAppointments.indexOf(filteredList[index]);
+                                  allTodayAppointments[originalIndex] = AppointmentModel(
                                     patientName: nameController.text,
                                     appointmentTime: tempSelectedTime,
                                     treatmentType: tempSelectedTreatment,
@@ -270,7 +313,7 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
                       child: ElevatedButton(
                         onPressed: () {
                           setState(() {
-                            appointmentList.remove(filteredList[index]);
+                            allTodayAppointments.remove(filteredList[index]);
                             _filterSearch(_searchController.text);
                           });
                           Navigator.pop(context);
@@ -304,79 +347,40 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // حساب القيم ديناميكياً بناءً على البيانات المحملة
     final List<Map<String, dynamic>> gridItems = [
-      {"title": "Total", "value": appointmentList.length.toString(), "color": Colors.lightGreenAccent},
-      {"title": "Confirmed", "value": "3", "color": Colors.cyanAccent},
-      {"title": "Pending", "value": "5", "color": Colors.orangeAccent},
+      {"title": "Total", "value": allTodayAppointments.length.toString(), "color": Colors.lightGreenAccent},
+      {"title": "Confirmed", "value": allTodayAppointments.where((a) => a.status == "confirmed").length.toString(), "color": Colors.cyanAccent},
+      {"title": "Pending", "value": allTodayAppointments.where((a) => a.status == "pending").length.toString(), "color": Colors.orangeAccent},
       {"title": "Current Time", "value": _currentTime, "color": Colors.greenAccent},
     ];
 
     return Scaffold(
       backgroundColor: bgColor,
       bottomNavigationBar: BottomNavigationBar(
-  type: BottomNavigationBarType.fixed,
-  backgroundColor: cardColor,
-  selectedItemColor: primaryBlue,
-  unselectedItemColor: Colors.white54,
-
-  onTap: (value) {
-    switch (value) {
-      case 0:
-        break;
-
-      case 1:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ClinicTraffic()),
-        );
-        break;
-
-      case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => AnalyticsReceptionist()),
-        );
-        break;
-
-      case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Billing()),
-        );
-        break;
-      case 4:
-      
-        break;
-    }
-  },
-
-  items:  [
-    BottomNavigationBarItem(
-      icon: Icon(Icons.home),
-      label: "Home",
-    ),
-    BottomNavigationBarItem(
-      icon: Icon( FontAwesomeIcons.usersLine),
-      label: "Traffic",
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.analytics),
-      label: "Analytics",
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.attach_money),
-      label: "Billing",
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.chat),
-      label: "Chat",
-    ),
-  ],
-),
-
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: cardColor,
+        selectedItemColor: primaryBlue,
+        unselectedItemColor: Colors.white54,
+        onTap: (value) {
+          switch (value) {
+            case 0: break;
+            case 1: Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ClinicTraffic())); break;
+            case 2: Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AnalyticsReceptionist())); break;
+            case 3: Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Billing())); break;
+            case 4: break;
+          }
+        },
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(FontAwesomeIcons.usersLine), label: "Traffic"),
+          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: "Analytics"),
+          BottomNavigationBarItem(icon: Icon(Icons.attach_money), label: "Billing"),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
+        ],
+      ),
       appBar: AppBar(
         backgroundColor: bgColor,
-        
         elevation: 0,
         leading: _isSearching
             ? IconButton(
@@ -385,24 +389,15 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
                   setState(() {
                     _isSearching = false;
                     _searchController.clear();
-                    filteredList = appointmentList;
+                    filteredList = allTodayAppointments;
                   });
                 },
               )
             : Padding(
-                padding: const EdgeInsets.only(left: 10.0, bottom: 8, top: 8),
+                padding: const EdgeInsets.all(8.0),
                 child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
-                    color: primaryBlue,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      FontAwesomeIcons.stethoscope,
-                      size: 18,
-                      color: Colors.black,
-                    ),
-                  ),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(8.0), color: primaryBlue),
+                  child: Center(child: Icon(FontAwesomeIcons.stethoscope, size: 18, color: Colors.black)),
                 ),
               ),
         title: _isSearching
@@ -410,176 +405,125 @@ class _SchedulepageState extends State<ReceptionistDashboard> {
                 controller: _searchController,
                 autofocus: true,
                 style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "Search patient name...",
-                  hintStyle: TextStyle(color: Colors.white38, fontSize: 16),
-                  border: InputBorder.none,
-                ),
+                decoration: InputDecoration(hintText: "Search patient name...", hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none),
                 onChanged: _filterSearch,
               )
-            : const Text(
-                "Daily Overview",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+            : const Text("Daily Overview", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           _isSearching
-              ? IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: () {
-                    _searchController.clear();
-                    _filterSearch("");
-                  },
-                )
-              : IconButton(
-                  onPressed: () => setState(() => _isSearching = true),
-                  icon: Icon(
-                    FontAwesomeIcons.magnifyingGlass,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                ),
+              ? IconButton(icon: Icon(Icons.close), onPressed: () { _searchController.clear(); _filterSearch(""); })
+              : IconButton(onPressed: () => setState(() => _isSearching = true), icon: Icon(FontAwesomeIcons.magnifyingGlass, size: 20)),
           if (!_isSearching)
-            IconButton(
-              onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => Schedulepage()));
-              },
-              icon: Icon(Icons.add, size: 26, color: Colors.white),
-            ),
+            IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => Schedulepage())), icon: Icon(Icons.add, size: 26)),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            if (!_isSearching) ...[
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: gridItems.length,
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.4,
-                ),
-                itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.white10),
+      body: isLoading 
+        ? Center(child: CircularProgressIndicator(color: primaryBlue))
+        : SingleChildScrollView(
+            child: Column(
+              children: [
+                if (!_isSearching) ...[
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: gridItems.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.4,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(gridItems[index]["value"].toString(), style: TextStyle(color: gridItems[index]["color"], fontSize: index == 3 ? 18 : 24, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text(gridItems[index]["title"], style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text("Today's Patients", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredList.length,
-              padding: EdgeInsets.symmetric(horizontal: 15, vertical: _isSearching ? 20 : 0),
-              itemBuilder: (context, index) {
-                final patient = filteredList[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white10),
+                    itemBuilder: (context, index) {
+                      return Container(
+                        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white10)),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(gridItems[index]["value"], style: TextStyle(color: gridItems[index]["color"], fontSize: index == 3 ? 16 : 24, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(gridItems[index]["title"], style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Align(alignment: Alignment.centerLeft, child: Text("Today's Patients", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+                  ),
+                ],
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredList.length,
+                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: _isSearching ? 20 : 0),
+                  itemBuilder: (context, index) {
+                    final patient = filteredList[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white10)),
+                      child: Column(
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                width: 35,
-                                height: 35,
-                                decoration: BoxDecoration(
-                                  color: primaryBlue.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: primaryBlue.withOpacity(0.5)),
-                                ),
-                                child: Icon(Icons.person, size: 20, color: primaryBlue),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
                                 children: [
-                                  Text(patient.patientName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                  Text(patient.treatmentType, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                  CircleAvatar(radius: 17, backgroundColor: primaryBlue.withOpacity(0.1), child: Icon(Icons.person, size: 20, color: primaryBlue)),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(patient.patientName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                      Text(patient.treatmentType, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Text(patient.status.toUpperCase(), style: TextStyle(color: patient.status == "confirmed" ? Colors.greenAccent : Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const Divider(height: 25, color: Colors.white10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(patient.appointmentTime, style: TextStyle(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w500)),
+                              Row(
+                                children: [
+                                  _buildActionButton("Edit", Colors.white70, () => _showEditDialog(index)),
+                                  const SizedBox(width: 8),
+                                  _buildActionButton("Cancel", Color(0xFFFF4B5C), () => _showCancelDialog(index)),
                                 ],
                               ),
                             ],
                           ),
-                          Text(patient.status.toUpperCase(), style: TextStyle(color: patient.status == "confirmed" ? Colors.greenAccent : Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      const Divider(height: 25, color: Colors.white10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(patient.appointmentTime, style: TextStyle(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.w500)),
-                          Row(
-                            children: [
-                              ElevatedButton(
-                                onPressed: () => _showEditDialog(index),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  foregroundColor: Colors.white70,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.white70.withOpacity(0.3))),
-                                ),
-                                child: Text("Edit", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _showCancelDialog(index),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  foregroundColor: Color(0xFFFF4B5C),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Color(0xFFFF4B5C).withOpacity(0.3))),
-                                ),
-                                child: Text("Cancel", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+    );
+  }
+
+  Widget _buildActionButton(String label, Color color, VoidCallback onTap) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: color.withOpacity(0.3))),
       ),
+      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
     );
   }
 }

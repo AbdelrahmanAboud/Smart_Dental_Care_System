@@ -1,8 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:smart_dental_care_system/pages/pateint/Patient_Treatment.dart';
 
 class TreatmentPlan extends StatefulWidget {
+  final String patientId;
+
+  const TreatmentPlan({super.key, required this.patientId});
+
   @override
   State<TreatmentPlan> createState() => _TreatmentPlanState();
 }
@@ -52,9 +56,6 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
     }
   }
 
-  // void _addMedication() {
-
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -526,28 +527,68 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                     ),
                   ),
 
-onPressed: () {
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (context) => PatientTreatmentPage(
-        medications: medications.map((med) => {
-          "name": med['name'],
-          "dosage": med['dosage'],
-          "times": List<String>.from(med['times']),
-          "duration": med['duration'],
-          "startDate": med['startDate'],
-
-          "taken": List<bool>.filled(med['times'].length, false),
-          "completionPercentage": 0.0,
-        }).toList(),
-        instructions: postVisitInstructions.map((inst) => {
-          "text": inst['text'],
-          "duration": inst['duration'],
-          "completed": false,
-        }).toList(),
+onPressed: () async {
+  if (medications.isEmpty && postVisitInstructions.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Add at least one medication or instruction"),
       ),
-    ),
-  );
+    );
+    return;
+  }
+  final medsData = medications.map((med) => {
+        "name": med['name'],
+        "dosage": med['dosage'],
+        "times": List<String>.from(med['times']),
+        "duration": med['duration'],
+        "startDate": (med['startDate'] as DateTime),
+        "taken": List<bool>.filled((med['times'] as List).length, false),
+        "completionPercentage": 0.0,
+      }).toList();
+  final instData = postVisitInstructions.map((inst) => {
+        "text": inst['text'],
+        "duration": inst['duration'],
+        "completed": false,
+      }).toList();
+
+  DateTime validUntilDate;
+  if (medsData.isNotEmpty) {
+    validUntilDate = medsData.map((m) {
+      final start = m['startDate'] as DateTime;
+      final days = m['duration'] as int;
+      return start.add(Duration(days: days));
+    }).reduce((a, b) => a.isAfter(b) ? a : b);
+  } else {
+    validUntilDate = DateTime.now().add(const Duration(days: 7));
+  }
+  try {
+    await FirebaseFirestore.instance
+        .collection('patient_treatments')
+        .doc(widget.patientId)
+        .set({
+      'medications': medsData.map((m) {
+        final map = Map<String, dynamic>.from(m);
+        map['startDate'] = Timestamp.fromDate(map['startDate'] as DateTime);
+        return map;
+      }).toList(),
+      'instructions': instData,
+      'pushedAt': FieldValue.serverTimestamp(),
+      'validUntil': Timestamp.fromDate(validUntilDate),
+    });
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(
+content: Text("Treatment plan sent to patient"),       
+ backgroundColor: cardColor,
+      ),
+    );
+    Navigator.of(context).pop();
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("error : $e")),
+    );
+  }
 },
                   icon: Icon(Icons.send, color: Colors.white),
                   label: Text(

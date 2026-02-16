@@ -25,7 +25,6 @@ class _NavigitionBarState extends State<NavigitionBar> {
       PatientHome(),
       PatientRecord(),
        PatientReminders(),
-      // TipsPage(),
       // ChatPage(),
      
     ];
@@ -59,10 +58,7 @@ class _NavigitionBarState extends State<NavigitionBar> {
             icon: Icon(Icons.notifications),
             label: "Reminders",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.lightbulb_outline),
-            label: "Tips",
-          ),
+         
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
         ],
       ),

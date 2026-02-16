@@ -344,7 +344,6 @@ class _AnalyticsState extends State<Analytics>
 
             const SizedBox(height: 28),
 
-            /// ================= RECENT REVIEWS =================  
             
             Container(
               padding: const EdgeInsets.all(16),
@@ -375,7 +374,6 @@ class _AnalyticsState extends State<Analytics>
 
             const SizedBox(height: 28),
 
-            /// ================= HIGH RISK PATIENTS ================= 
             
             Container(
               padding: const EdgeInsets.all(16),
@@ -421,7 +419,6 @@ class _AnalyticsState extends State<Analytics>
 
             const SizedBox(height: 28),
 
-            /// ================= EMERGENCY CASES =================
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -462,7 +459,6 @@ class _AnalyticsState extends State<Analytics>
                   ),
                   const SizedBox(height: 12),
 
-                  // Average Response Time
                   Builder(
                     builder: (context) {
                       double avgTime = 0;
