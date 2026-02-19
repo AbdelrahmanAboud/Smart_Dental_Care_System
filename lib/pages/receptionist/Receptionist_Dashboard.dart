@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/DoctorModels/PatientAppointment.dart';
 import 'package:smart_dental_care_system/data/PateintModels/AvailableDay.dart';
 import 'package:smart_dental_care_system/data/receptionistModels/Appointment_Model.dart';
+import 'package:smart_dental_care_system/pages/receptionist/ReceptionChatList.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Billing%20.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Analytics.dart';
 import 'package:smart_dental_care_system/pages/receptionist/Recptionist_Traffic.dart';
@@ -624,6 +625,10 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
               );
               break;
             case 4:
+             Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => ReceptionChatList()),
+              );
               break;
           }
         },

@@ -1,5 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class TreatmentPlan extends StatefulWidget {
@@ -22,6 +29,41 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
   final TextEditingController dosageController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
   final TextEditingController instructionController = TextEditingController();
+  final TextEditingController visitTypeController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+  Future<String?> uploadToCloudinary(File file) async {
+    String cloudName = "ddrjzbrwp";
+    String uploadPreset = "Smart Dental Care System";
+
+    var uri = Uri.parse(
+      "https://api.cloudinary.com/v1_1/$cloudName/auto/upload",
+    );
+    var request = http.MultipartRequest("POST", uri);
+
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    request.fields['upload_preset'] = uploadPreset;
+
+    request.fields['flags'] = 'attachment';
+
+    var response = await request.send();
+    if (response.statusCode == 200) {
+      var responseData = await response.stream.toBytes();
+      var responseString = utf8.decode(responseData);
+      var jsonResponse = jsonDecode(responseString);
+      return jsonResponse['secure_url'];
+    } else {
+      print("Cloudinary Error: ${response.statusCode}");
+    }
+    return null;
+  }
+
+  File? _selectedFile;
+  final ImagePicker _picker = ImagePicker();
+
+  String visitStatus = "Completed";
+
+  String doctorName = "";
+
   List<Map<String, dynamic>> postVisitInstructions = [];
   String selectedHideDuration = "48 hours";
   final List<String> durationOptions = [
@@ -56,7 +98,6 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +121,237 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
+              SizedBox(height: 10),
+
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12, left: 15),
+                child: Text(
+                  "Visit Details",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: visitTypeController,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: "Visit Type (Cleaning, Filling...)",
+                        hintStyle: TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: bgColor.withOpacity(0.4),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: "Doctor Notes about this visit...",
+                        hintStyle: TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: bgColor.withOpacity(0.4),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Attachments",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: () async {
+                              FilePickerResult? result = await FilePicker
+                                  .platform
+                                  .pickFiles(type: FileType.any);
+
+                              if (result != null &&
+                                  result.files.single.path != null) {
+                                setState(() {
+                                  _selectedFile = File(
+                                    result.files.single.path!,
+                                  );
+                                });
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: cardColor.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: primaryBlue.withOpacity(0.5),
+                                  width: 1,
+                                ),
+                              ),
+                              child: _selectedFile == null
+                                  ? Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.upload_file_rounded,
+                                          color: primaryBlue,
+                                          size: 40,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          "Click to add file or document",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ],
+                                    )
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          [
+                                                'jpg',
+                                                'jpeg',
+                                                'png',
+                                                'gif',
+                                                'webp',
+                                              ].contains(
+                                                _selectedFile!.path
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase(),
+                                              )
+                                              ? Image.file(
+                                                  _selectedFile!,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(
+                                                  color: Colors.black26,
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.description,
+                                                        color: Colors.white70,
+                                                        size: 40,
+                                                      ),
+                                                      const SizedBox(height: 5),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                            ),
+                                                        child: Text(
+                                                          _selectedFile!.path
+                                                              .split('/')
+                                                              .last,
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 12,
+                                                              ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedFile = null;
+                                                });
+                                              },
+                                              child: const CircleAvatar(
+                                                radius: 12,
+                                                backgroundColor: Colors.red,
+                                                child: Icon(
+                                                  Icons.close,
+                                                  color: Colors.white,
+                                                  size: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: visitStatus,
+                      dropdownColor: cardColor,
+                      items: ["Completed", "Pending"]
+                          .map(
+                            (e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(
+                                e,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) => setState(() => visitStatus = val!),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: bgColor.withOpacity(0.4),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 15),
+
               Padding(
                 padding: const EdgeInsets.only(bottom: 12, left: 15),
                 child: Text(
@@ -127,6 +398,8 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                         Expanded(
                           child: TextField(
                             controller: dosageController,
+                            keyboardType: TextInputType.number,
+
                             style: TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               hintText: "Dosage (500mg)",
@@ -288,7 +561,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                 ),
               ),
 
-              SizedBox(height: 25),
+              SizedBox(height: 15),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12, left: 15),
                 child: Text(
@@ -409,7 +682,6 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                           ),
                           SizedBox(height: 10),
 
-                          // الصف الأول: حقل النص
                           Container(
                             margin: EdgeInsets.only(bottom: 10),
                             child: TextField(
@@ -435,7 +707,6 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                             ),
                           ),
 
-                          // الصف الثاني: الدروب داون وزر الإضافة
                           Row(
                             children: [
                               Expanded(
@@ -527,69 +798,115 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                     ),
                   ),
 
-onPressed: () async {
-  if (medications.isEmpty && postVisitInstructions.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Add at least one medication or instruction"),
-      ),
-    );
-    return;
-  }
-  final medsData = medications.map((med) => {
-        "name": med['name'],
-        "dosage": med['dosage'],
-        "times": List<String>.from(med['times']),
-        "duration": med['duration'],
-        "startDate": (med['startDate'] as DateTime),
-        "taken": List<bool>.filled((med['times'] as List).length, false),
-        "completionPercentage": 0.0,
-      }).toList();
-  final instData = postVisitInstructions.map((inst) => {
-        "text": inst['text'],
-        "duration": inst['duration'],
-        "completed": false,
-      }).toList();
+                  onPressed: () async {
+                    if (medications.isEmpty && postVisitInstructions.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Add at least one medication or instruction",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-  DateTime validUntilDate;
-  if (medsData.isNotEmpty) {
-    validUntilDate = medsData.map((m) {
-      final start = m['startDate'] as DateTime;
-      final days = m['duration'] as int;
-      return start.add(Duration(days: days));
-    }).reduce((a, b) => a.isAfter(b) ? a : b);
-  } else {
-    validUntilDate = DateTime.now().add(const Duration(days: 7));
-  }
-  try {
-    await FirebaseFirestore.instance
-        .collection('patient_treatments')
-        .doc(widget.patientId)
-        .set({
-      'medications': medsData.map((m) {
-        final map = Map<String, dynamic>.from(m);
-        map['startDate'] = Timestamp.fromDate(map['startDate'] as DateTime);
-        return map;
-      }).toList(),
-      'instructions': instData,
-      'pushedAt': FieldValue.serverTimestamp(),
-      'validUntil': Timestamp.fromDate(validUntilDate),
-    });
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(
-content: Text("Treatment plan sent to patient"),       
- backgroundColor: cardColor,
-      ),
-    );
-    Navigator.of(context).pop();
-  } catch (e) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("error : $e")),
-    );
-  }
-},
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(
+                        child: CircularProgressIndicator(color: Colors.blue),
+                      ),
+                    );
+
+                    try {
+                      String formattedDate = DateFormat(
+                        'MMM dd, yyyy',
+                      ).format(DateTime.now());
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      final doctorName = currentUser?.displayName ?? "Doctor";
+                      String? fileUrl;
+
+                      if (_selectedFile != null) {
+                        fileUrl = await uploadToCloudinary(_selectedFile!);
+                      }
+
+                      final batch = FirebaseFirestore.instance.batch();
+
+                      final medsData = medications
+                          .map(
+                            (med) => {
+                              'name': med['name'],
+                              'dosage': med['dosage'],
+                              'times': med['times'],
+                              'duration': med['duration'],
+                              'startDate': med['startDate'],
+                            },
+                          )
+                          .toList();
+
+                      final instData = postVisitInstructions
+                          .map(
+                            (inst) => {
+                              'text': inst['text'],
+                              'duration': inst['duration'],
+                            },
+                          )
+                          .toList();
+
+                      final treatmentRef = FirebaseFirestore.instance
+                          .collection('patient_treatments')
+                          .doc(widget.patientId);
+
+                      batch.set(treatmentRef, {
+                        'medications': medsData,
+                        'instructions': instData,
+                        'pushedAt': FieldValue.serverTimestamp(),
+                      });
+
+                      final historyRef = FirebaseFirestore.instance
+                          .collection('patient_records')
+                          .doc(widget.patientId)
+                          .collection('visits')
+                          .doc();
+
+                      batch.set(historyRef, {
+                        'doctorName': doctorName,
+                        'date': DateFormat(
+                          'MMM dd, yyyy',
+                        ).format(DateTime.now()),
+                        'status': visitStatus,
+                        'notes': notesController.text.trim(),
+                        'visitType': visitTypeController.text.trim(),
+                        'attachmentUrl': _selectedFile != null
+                            ? await uploadToCloudinary(_selectedFile!)
+                            : null,
+                        'attachmentName': _selectedFile != null
+                            ? _selectedFile!.path.split('/').last
+                            : null,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+
+                      await batch.commit();
+
+                      if (context.mounted) {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Visit recorded successfully!"),
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                      }
+                    } catch (e) {
+                      if (context.mounted)
+                        Navigator.of(context, rootNavigator: true).pop();
+
+                      print("Error during saving: $e");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error: ${e.toString()}")),
+                      );
+                    }
+                  },
                   icon: Icon(Icons.send, color: Colors.white),
                   label: Text(
                     "Push to Patient App",
@@ -608,117 +925,139 @@ content: Text("Treatment plan sent to patient"),
       ),
     );
   }
-Widget _buildMedicationTable() {
-  if (medications.isEmpty) {
+
+  Widget _buildMedicationTable() {
+    if (medications.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(30),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.medication_outlined, color: Colors.white24, size: 40),
+            SizedBox(height: 10),
+            Text(
+              "No medications added yet",
+              style: TextStyle(color: Colors.white24),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(30),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Column(
-        children: [
-          Icon(Icons.medication_outlined, color: Colors.white24, size: 40),
-          SizedBox(height: 10),
-          Text(
-            "No medications added yet",
-            style: TextStyle(color: Colors.white24),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          dataRowMinHeight: 50,
+          dataRowMaxHeight: 80,
+          headingRowHeight: 45,
+          headingRowColor: MaterialStateProperty.all(
+            Colors.white.withOpacity(0.05),
           ),
-        ],
+          columnSpacing: 15,
+          columns: [
+            DataColumn(
+              label: Text("Med", style: TextStyle(color: primaryBlue)),
+            ),
+            DataColumn(
+              label: Text("Dose", style: TextStyle(color: primaryBlue)),
+            ),
+            DataColumn(
+              label: Text("Times", style: TextStyle(color: primaryBlue)),
+            ),
+            DataColumn(
+              label: Text("End", style: TextStyle(color: primaryBlue)),
+            ),
+            DataColumn(
+              label: Text("", style: TextStyle(color: primaryBlue)),
+            ),
+          ],
+          rows: medications.asMap().entries.map((entry) {
+            int index = entry.key;
+            var med = entry.value;
+            DateTime endDate = med['startDate'].add(
+              Duration(days: med['duration']),
+            );
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    med['name'],
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    med['dosage'],
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+                DataCell(
+                  Container(
+                    width: 130,
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: (med['times'] as List).map((time) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryBlue.withOpacity(0.1),
+                            border: Border.all(
+                              color: primaryBlue.withOpacity(0.3),
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            time.toString(),
+                            style: TextStyle(color: Colors.white, fontSize: 10),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    DateFormat('dd/MM').format(endDate),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+                DataCell(
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Colors.redAccent.withOpacity(0.8),
+                      size: 18,
+                    ),
+                    onPressed: () =>
+                        setState(() => medications.removeAt(index)),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
-
-  return Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        dataRowMinHeight: 50,
-        dataRowMaxHeight: 80, 
-        headingRowHeight: 45,
-        headingRowColor: MaterialStateProperty.all(
-          Colors.white.withOpacity(0.05),
-        ),
-        columnSpacing: 15, 
-        columns: [
-          DataColumn(label: Text("Med", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("Dose", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("Times", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("End", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("", style: TextStyle(color: primaryBlue))),
-        ],
-        rows: medications.asMap().entries.map((entry) {
-          int index = entry.key;
-          var med = entry.value;
-          DateTime endDate = med['startDate'].add(
-            Duration(days: med['duration']),
-          );
-
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  med['name'],
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ),
-              DataCell(
-                Text(
-                  med['dosage'],
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ),
-              DataCell(
-                Container(
-                  width: 130, 
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: (med['times'] as List).map((time) {
-                      return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: primaryBlue.withOpacity(0.1),
-                          border: Border.all(color: primaryBlue.withOpacity(0.3), width: 0.5),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          time.toString(),
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              DataCell(
-                Text(
-                  DateFormat('dd/MM').format(endDate),
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-              DataCell(
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent.withOpacity(0.8),
-                    size: 18,
-                  ),
-                  onPressed: () => setState(() => medications.removeAt(index)),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    ),
-  );
-}
 }

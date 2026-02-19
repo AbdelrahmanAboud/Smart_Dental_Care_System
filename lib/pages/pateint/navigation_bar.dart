@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:smart_dental_care_system/pages/pateint/ChatScreen.dart';
+import 'package:smart_dental_care_system/pages/pateint/PatientSelectionPage.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient_Reminders.dart';
@@ -19,14 +21,15 @@ class _NavigitionBarState extends State<NavigitionBar> {
   late final List<Widget> _pages;
 
   @override
+  @override
   void initState() {
     super.initState();
     _pages = [
       PatientHome(),
       PatientRecord(),
-       PatientReminders(),
-      // ChatPage(),
-     
+      PatientReminders(),
+      PatientSelectionPage(
+      ),
     ];
   }
 

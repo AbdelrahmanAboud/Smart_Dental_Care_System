@@ -168,7 +168,7 @@ class _PateintProfileState extends State<PateintProfile> {
                           shape: BoxShape.circle,
                           border: Border.all(color: cardColor, width: 2),
                         ),
-                        child: const Icon(
+                        child:  Icon(
                           Icons.camera_alt,
                           color: Colors.white,
                           size: 20,
