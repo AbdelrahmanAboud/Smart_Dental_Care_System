@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/PateintModels/DentelRecord.dart';
-import 'package:smart_dental_care_system/data/PateintModels/MedicalFile.dart';
 import 'package:smart_dental_care_system/pages/pateint/visit_details_Page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,32 +17,8 @@ class PatientRecord extends StatefulWidget {
 
 class _PatientRrecordState extends State<PatientRecord> {
   TextEditingController _searchController = TextEditingController();
-  List<DentalRecord> _filteredRecords = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _filteredRecords = dentalRecords;
-  }
-
-  void _runFilter(String enteredKeyword) {
-    List<DentalRecord> results = [];
-    if (enteredKeyword.isEmpty) {
-      results = dentalRecords;
-    } else {
-      String query = enteredKeyword.toLowerCase();
-      results = dentalRecords.where((record) {
-        return record.doctorName.toLowerCase().contains(query) ||
-               record.visitType.toLowerCase().contains(query) ||
-               record.date.toLowerCase().contains(query) ||    
-               record.status.toLowerCase().contains(query);    
-      }).toList();
-    }
-
-    setState(() {
-      _filteredRecords = results;
-    });
-  }
+  String _searchQuery = "";
+  final patientId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -55,18 +32,17 @@ class _PatientRrecordState extends State<PatientRecord> {
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
- onPressed: () {
-            Navigator.of(
-              context,
-            ).pop();
-          },        ),
+          icon:  Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Divider(thickness: 1.5, color: Colors.black26),
+            Divider(thickness: 1.5, color: Colors.black26),
 
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -75,15 +51,24 @@ class _PatientRrecordState extends State<PatientRecord> {
                   Expanded(
                     child: TextFormField(
                       controller: _searchController,
-                      onChanged: (value) => _runFilter(value),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value.toLowerCase();
+                        });
+                      },
                       style: const TextStyle(color: Colors.white, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: "Search records...",
                         hintStyle: const TextStyle(color: Colors.grey),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.grey,
+                        ),
                         filled: true,
                         fillColor: cardColor.withOpacity(0.5),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20.0),
                           borderSide: BorderSide.none,
@@ -105,8 +90,10 @@ class _PatientRrecordState extends State<PatientRecord> {
                     ),
                     child: IconButton(
                       onPressed: () {
-                        _searchController.clear();
-                        _runFilter('');
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = "";
+                        });
                       },
                       icon: const FaIcon(
                         FontAwesomeIcons.magnifyingGlass,
@@ -123,50 +110,77 @@ class _PatientRrecordState extends State<PatientRecord> {
               padding: EdgeInsets.symmetric(horizontal: 20.0),
               child: Text(
                 "Visit History",
-                style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 10),
 
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(), 
-              itemCount: _filteredRecords.length,
-              itemBuilder: (context, index) {
-                return Center(
-                  child: SizedBox(
-                    width: 350,
-                    child: RecordCard(_filteredRecords[index], context),
-                  ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('patient_records')
+                  .doc(patientId)
+                  .collection('visits')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No visits yet",
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+
+                List<DentalRecord> visits = snapshot.data!.docs
+                    .map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return DentalRecord(
+                        date: data['date'] ?? "",
+                        doctorName: data['doctorName'] ?? "",
+                        visitType: data['visitType'] ?? "",
+                        notes: data['notes'] ?? "",
+                        status: data['status'] ?? "Pending",
+                        attachmentUrl: data['attachmentUrl'],
+                      );
+                    })
+                    .where(
+                      (record) =>
+                          record.doctorName.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          record.visitType.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          record.date.toLowerCase().contains(_searchQuery) ||
+                          record.status.toLowerCase().contains(_searchQuery),
+                    )
+                    .toList();
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: visits.length,
+                  itemBuilder: (context, index) {
+                    return Center(
+                      child: SizedBox(
+                        width: 350,
+                        child: RecordCard(visits[index], context),
+                      ),
+                    );
+                  },
                 );
               },
             ),
-
-            const SizedBox(height: 25),
-
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Text(
-                "Attachments",
-                style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: medicalfile.length,
-              itemBuilder: (context, index) {
-                return Center(
-                  child: SizedBox(
-                    width: 350, 
-                    child: AttachmentCard(medicalfile[index])
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 30), 
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -177,120 +191,84 @@ class _PatientRrecordState extends State<PatientRecord> {
 Widget RecordCard(DentalRecord record, BuildContext context) {
   return Padding(
     padding: const EdgeInsets.only(left: 10, right: 10, bottom: 15),
-    child: GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VisitDetailsPage(visitDate: record.date),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    child: Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(record.date, style: TextStyle(color: primaryBlue)),
+                Text(
+                  record.status,
+                  style: TextStyle(
+                    color: record.status.toLowerCase() == "completed"
+                        ? Color(0xFF00E676)
+                        : Color(0xFFFFD700),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    record.date,
-                    style: TextStyle(fontSize: 14, color: primaryBlue),
-                  ),
-                  Text(
-                    record.status,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: record.status.toLowerCase() == "completed"
-                          ? const Color(0xFF00E676)
-                          : const Color(0xFFFFD700),
-                    ),
-                  ),
-                ],
+            SizedBox(height: 10),
+            Text(
+              record.doctorName,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 10),
-              Text(
-                record.doctorName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+            ),
+            Text(record.visitType, style: TextStyle(color: Colors.grey)),
+            SizedBox(height: 10),
+            Text(
+              record.notes,
+              style: TextStyle(
+                color: Colors.white70,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+
+            if (record.attachmentUrl != null &&
+                record.attachmentUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: GestureDetector(
+                  onTap: () async {
+                    final Uri url = Uri.parse(record.attachmentUrl!);
+
+                    if (!await launchUrl(
+                      url,
+                      mode: LaunchMode.externalNonBrowserApplication,
+                    )) {
+                      await launchUrl(
+                        url,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_file, color: primaryBlue),
+                      SizedBox(width: 5),
+                      Text(
+                        "View Attachment",
+                        style: TextStyle(
+                          color: primaryBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Text(
-                record.visitType,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                record.notes,
-                style: const TextStyle(fontSize: 14, color: Colors.white70, fontStyle: FontStyle.italic),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+          ],
         ),
-      ),
-    ),
-  );
-}
-
-Widget AttachmentCard(MedicalFile file) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: file.iconColor.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(file.icon, size: 24, color: file.iconColor),
-      ),
-      title: Text(
-        file.fileName,
-        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        file.date,
-        style: const TextStyle(color: Colors.grey, fontSize: 12),
-      ),
-      trailing: IconButton(
-        icon: const Icon(Icons.visibility, color: Colors.white70),
-        onPressed: () async {
-          final Uri url = Uri.parse(file.fileUrl);
-          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-            debugPrint("Could not launch $url");
-          }
-        },
       ),
     ),
   );

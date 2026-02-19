@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_dental_care_system/firebase_options.dart';
+import 'package:smart_dental_care_system/pages/doctor/AddRecordPage.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
 import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
@@ -20,22 +22,32 @@ import 'package:smart_dental_care_system/pages/receptionist/Receptionist_Dashboa
 final Color bgColor = const Color(0xFF0B1C2D);
 final Color primaryBlue = const Color(0xFF2EC4FF);
 final Color cardColor = const Color(0xFF112B3C);
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
-
   );
-  testFirestore();
-  // NotificationHelper.showInstantNotification();
+
+FirebaseDatabase.instance.databaseURL = "https://smart-dental-care-system-622e0-default-rtdb.europe-west1.firebasedatabase.app/";
+  testFirestore(); 
+  testRealtime();  
+  
   runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-
-        home: Login(),
-      )
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Login(),
+    )
   );
+}
+
+void testRealtime() async {
+  try {
+    await FirebaseDatabase.instance.ref("connection_test").set("Connected at ${DateTime.now()}");
+    print("Realtime Database Connected Successfully!");
+  } catch (e) {
+    print("Realtime Database Error: $e");
+  }
 }
 void testFirestore() async {
   try {
