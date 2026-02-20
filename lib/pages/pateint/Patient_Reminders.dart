@@ -1,62 +1,48 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import 'notification_helpe.dart';
+import 'notification_helpe.dart'; // تأكد أن الاسم مطابق للملف عندك
 
 class PatientReminders extends StatefulWidget {
   const PatientReminders({super.key});
 
   @override
-  State<PatientReminders> createState() => _RemindersScreenState();
+  State<PatientReminders> createState() => _PatientRemindersState();
 }
 
-class _RemindersScreenState extends State<PatientReminders> {
+class _PatientRemindersState extends State<PatientReminders> {
   final Color bgColor = const Color(0xFF06101E);
   final Color cardColor = const Color(0xFF102136);
   final Color accentBlue = const Color(0xFF00E5FF);
 
-  final CollectionReference remindersRef =
-  FirebaseFirestore.instance.collection('reminders');
+  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   void initState() {
     super.initState();
-    _setupNotifications();
+    // 1. Initialize Notification System
+    NotificationHelper.init();
   }
 
-  Future<void> _setupNotifications() async {
-    await NotificationHelper.init();
-    _listenAndScheduleReminders();
+  // Method to schedule local notifications
+  void _scheduleAppNotification(String docId, Map<String, dynamic> data) {
+    DateTime scheduledDate = (data['scheduledTime'] as Timestamp).toDate();
+
+    // نبرمج الإشعار فقط لو كان وقته في المستقبل
+    if (scheduledDate.isAfter(DateTime.now())) {
+      NotificationHelper.scheduleNotification(
+        id: docId.hashCode.abs(),
+        // هنا التأكد إن العنوان بيقرأ صح سواء دواء أو غسيل سنان
+        title: data['title'] ?? (data['iconType'] == 'hygiene' ? "Tooth Brushing" : "Medical Reminder"),
+        body: data['description'] ?? "Time for your oral hygiene routine",
+        scheduledDate: scheduledDate,
+      );
+    }
   }
 
-  void _listenAndScheduleReminders() {
-    remindersRef
-        .where('patientId', isEqualTo: 'user_123')
-        .where('isDone', isEqualTo: false)
-        .snapshots()
-        .listen((snapshot) {
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        if (data['scheduledTime'] != null) {
-          DateTime dateTime = (data['scheduledTime'] as Timestamp).toDate();
-
-          // التأكد من أن الموعد في المستقبل
-          if (dateTime.isAfter(DateTime.now())) {
-            NotificationHelper.scheduleNotification(
-              id: doc.id.hashCode.abs(),
-              title: data['title'] ?? 'Reminder',
-              body: data['description'] ?? 'Stay on track!',
-              // التعديل هنا: استخدم الوقت القادم من الداتابيز
-              scheduledDate: dateTime,
-            );
-            print("⏰ Scheduled: ${data['title']} at $dateTime");
-          }
-        }
-      }
-    });
-  }
-  IconData _getIcon(String iconType) {
+  IconData _getIcon(String? iconType) {
     switch (iconType) {
       case 'medication': return FontAwesomeIcons.pills;
       case 'hygiene': return FontAwesomeIcons.tooth;
@@ -66,21 +52,78 @@ class _RemindersScreenState extends State<PatientReminders> {
     }
   }
 
-  Future<void> _markAsDone(String docId) async {
-    await remindersRef.doc(docId).update({
-      'isDone': true,
-      'completedAt': FieldValue.serverTimestamp(),
-    });
+  // --- ADD HYGIENE MANUALLY ---
+  Future<void> _addHygieneReminderManually() async {
+    try {
+      await FirebaseFirestore.instance.collection('reminders').add({
+        'patientId': currentUserId,
+        'title': "Tooth Brushing",
+        'description': "Daily oral hygiene routine",
+        'iconType': 'hygiene',
+        'scheduledTime': Timestamp.now(), // Appears immediately
+        'isDone': false,
+      });
+      _showSnack("Hygiene reminder added successfully!");
+    } catch (e) {
+      _showSnack("Error: $e");
+    }
+  }
 
-    // إلغاء الإشعار عند الضغط على Done
-    NotificationHelper.cancelNotification(docId.hashCode.abs());
+  // --- MARK AS DONE LOGIC ---
+  Future<void> _markAsDone(String docId, Map<String, dynamic> data) async {
+    try {
+      // 1. Mark current as finished
+      await FirebaseFirestore.instance.collection('reminders').doc(docId).update({'isDone': true});
+      NotificationHelper.cancelNotification(docId.hashCode.abs());
 
+      DateTime currentTime = (data['scheduledTime'] as Timestamp).toDate();
+      DateTime nextReminder = currentTime.add(const Duration(hours: 12));
+
+      // 2. Hygiene Logic (Infinite Loop every 12 hours)
+      // --- حالة غسيل الأسنان ---
+      if (data['iconType'] == 'hygiene') {
+        await FirebaseFirestore.instance.collection('reminders').add({
+          'patientId': currentUserId,
+          'title': data['title'] ?? "Tooth Brushing", // تأكد من وجود العنوان
+          'description': data['description'] ?? "Keep your smile clean",
+          'iconType': 'hygiene',
+          'scheduledTime': Timestamp.fromDate(nextReminder),
+          'isDone': false,
+        });
+        _showSnack("Hygiene reminder set for the next 12 hours.");
+      }
+
+      // 3. Medication Logic (Repeat until endDate)
+      else if (data['iconType'] == 'medication' && data.containsKey('endDate')) {
+        DateTime endDate = (data['endDate'] as Timestamp).toDate();
+
+        if (nextReminder.isBefore(endDate)) {
+          await FirebaseFirestore.instance.collection('reminders').add({
+            'patientId': currentUserId,
+            'title': data['title'],
+            'description': data['description'],
+            'iconType': 'medication',
+            'scheduledTime': Timestamp.fromDate(nextReminder),
+            'endDate': data['endDate'],
+            'isDone': false,
+          });
+          _showSnack("Dose recorded! Next reminder in 12 hours.");
+        } else {
+          _showSnack("Course completed! Stay healthy.", isSuccess: true);
+        }
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+  void _showSnack(String msg, {bool isSuccess = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("Great job! Reminder completed."),
-        backgroundColor: accentBlue,
-        behavior: SnackBarBehavior.floating,
+        content: Text(msg),
+        backgroundColor: isSuccess ? Colors.green : accentBlue,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -93,66 +136,60 @@ class _RemindersScreenState extends State<PatientReminders> {
         elevation: 0,
         backgroundColor: bgColor,
         leading: IconButton(
-          icon:  Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-          onPressed: () {
-            Navigator.of(
-              context,
-            ).pop();
-          },
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "My Reminders",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
         ),
-        actions: [
-          // زر لاختبار الإشعارات (يظهر إشعار بعد 5 ثواني)
-          IconButton(
-            icon: Icon(Icons.notification_add_outlined, color: accentBlue),
-            onPressed: () {
-              NotificationHelper.scheduleNotification(
-                id: 999,
-                title: "Test Reminder",
-                body: "This is a test to verify notifications are working!",
-                scheduledDate: DateTime.now().add(const Duration(seconds: 5)),
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Test notification set for 5 seconds from now"))
-              );
-            },
-          )
-        ],
       ),
+
+      // Floating Action Button to add Hygiene manually
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addHygieneReminderManually,
+        backgroundColor: accentBlue,
+        child: const Icon(FontAwesomeIcons.tooth, color: Color(0xFF06101E)),
+      ),
+
       body: StreamBuilder<QuerySnapshot>(
-        stream: remindersRef
-            .where('patientId', isEqualTo: 'user_123')
+        stream: FirebaseFirestore.instance
+            .collection('reminders')
+            .where('patientId', isEqualTo: currentUserId)
             .where('isDone', isEqualTo: false)
+            .orderBy('scheduledTime') // تأكد من عمل الـ Index كما شرحنا سابقاً
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: accentBlue));
           }
 
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
-                child: Text("No upcoming reminders", style: TextStyle(color: Colors.white70))
+              child: Text("No upcoming reminders", style: TextStyle(color: Colors.white70, fontSize: 16)),
             );
           }
 
-          final reminders = snapshot.data!.docs;
+          final remindersDocs = snapshot.data!.docs;
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            itemCount: reminders.length,
+            itemCount: remindersDocs.length,
             itemBuilder: (context, index) {
-              var data = reminders[index].data() as Map<String, dynamic>;
-              String docId = reminders[index].id;
+              var data = remindersDocs[index].data() as Map<String, dynamic>;
+              String docId = remindersDocs[index].id;
 
-              Timestamp timestamp = data['scheduledTime'];
-              DateTime dateTime = timestamp.toDate();
-              String formattedTime = DateFormat('hh:mm a').format(dateTime);
-              String formattedDate = DateFormat('MMM d, yyyy').format(dateTime);
+              _scheduleAppNotification(docId, data);
 
-              return _buildReminderItem(docId, data, formattedTime, formattedDate);
+              DateTime dateTime = (data['scheduledTime'] as Timestamp).toDate();
+              String time = DateFormat('hh:mm a').format(dateTime);
+              String date = DateFormat('MMM d, yyyy').format(dateTime);
+
+              return _buildReminderItem(docId, data, time, date);
             },
           );
         },
@@ -167,6 +204,7 @@ class _RemindersScreenState extends State<PatientReminders> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +217,7 @@ class _RemindersScreenState extends State<PatientReminders> {
                     color: accentBlue.withOpacity(0.1),
                     shape: BoxShape.circle
                 ),
-                child: Icon(_getIcon(data['iconType'] ?? 'bell'), color: accentBlue, size: 22),
+                child: Icon(_getIcon(data['iconType']), color: accentBlue, size: 22),
               ),
               const SizedBox(width: 15),
               Expanded(
@@ -187,7 +225,7 @@ class _RemindersScreenState extends State<PatientReminders> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        data['title'] ?? 'No Title',
+                        data['title'] ?? 'Reminder',
                         style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
                     ),
                     const SizedBox(height: 6),
@@ -231,15 +269,15 @@ class _RemindersScreenState extends State<PatientReminders> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: () => _markAsDone(docId),
+                onPressed: () => _markAsDone(docId, data),
                 style: ElevatedButton.styleFrom(
                     backgroundColor: accentBlue,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    minimumSize: const Size(110, 48)
+                    minimumSize: const Size(120, 48)
                 ),
-                child: Text(
+                child: const Text(
                     "Done",
-                    style: TextStyle(color: bgColor, fontWeight: FontWeight.bold)
+                    style: TextStyle(color: Color(0xFF06101E), fontWeight: FontWeight.bold)
                 ),
               ),
             ],
@@ -248,4 +286,5 @@ class _RemindersScreenState extends State<PatientReminders> {
       ),
     );
   }
+
 }

@@ -18,6 +18,8 @@ class PatientClinicalView extends StatefulWidget {
 }
 
 class _PatientClinicalViewState extends State<PatientClinicalView> {
+  String currentPatientName = "Patient";
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,18 +31,10 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
         titleSpacing: 0,
         title: const Text(
           "Patient Profile",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 20,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -52,6 +46,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
             children: [
               const SizedBox(height: 10),
 
+              // StreamBuilder الأول: لجلب بيانات المريض + Risk Score
               StreamBuilder<DocumentSnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
@@ -62,9 +57,15 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  var userData =
-                      snapshot.data?.data() as Map<String, dynamic>? ?? {};
+                  var userData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
                   String? profileUrl = userData['profileImage'];
+                  currentPatientName = userData['name'] ?? "Unknown Patient";
+
+                  // ربط الـ Risk Score من الفايربيز
+                  int riskScore = (userData['oralScore']['score'] ?? 0).toInt();
+
+                  // تحديد اللون بناءً على الدرجة
+                  Color riskColor = riskScore >= 80 ? Colors.greenAccent : (riskScore >= 60 ? Colors.orangeAccent : Colors.redAccent);
 
                   return Container(
                     width: double.infinity,
@@ -76,53 +77,57 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                     ),
                     child: Column(
                       children: [
+                        // عرض الـ Risk Score Badge
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: riskColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: riskColor.withOpacity(0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.analytics_outlined, color: riskColor, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "Risk: $riskScore%",
+                                  style: TextStyle(color: riskColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         Container(
-                          padding:  EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: primaryBlue.withOpacity(0.5),
-                              width: 2,
-                            ),
+                            border: Border.all(color: primaryBlue.withOpacity(0.5), width: 2),
                           ),
                           child: CircleAvatar(
                             radius: 40,
                             backgroundColor: bgColor,
-                            backgroundImage:
-                                (profileUrl != null && profileUrl.isNotEmpty)
+                            backgroundImage: (profileUrl != null && profileUrl.isNotEmpty)
                                 ? NetworkImage(profileUrl)
-                                :  AssetImage("lib/assets/user_logo.png")
-                                      as ImageProvider,
+                                : const AssetImage("lib/assets/user_logo.png") as ImageProvider,
                           ),
                         ),
-                         SizedBox(height: 15),
+                        const SizedBox(height: 15),
                         Text(
-                          userData['name'] ?? "Unknown Patient",
-                          style:  TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          currentPatientName,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 5),
                         Text(
                           "ID: ${userData['id'] ?? 'N/A'}",
-                          style: TextStyle(
-                            color: primaryBlue.withOpacity(0.8),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: TextStyle(color: primaryBlue.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 15),
-                        _buildContactInfo(
-                          Icons.phone,
-                          userData['phone'] ?? "No Phone",
-                        ),
+                        _buildContactInfo(Icons.phone, userData['phone'] ?? "No Phone"),
                         const SizedBox(height: 8),
-                        _buildContactInfo(
-                          Icons.email,
-                          userData['email'] ?? "No Email",
-                        ),
+                        _buildContactInfo(Icons.email, userData['email'] ?? "No Email"),
                       ],
                     ),
                   );
@@ -131,6 +136,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
 
               const SizedBox(height: 15),
 
+              // StreamBuilder الثاني: Dental Chart
               StreamBuilder<DocumentSnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('patients')
@@ -138,7 +144,6 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   Map<String, String> teethStates = {};
-
                   if (snapshot.hasData && snapshot.data!.exists) {
                     var data = snapshot.data!.data() as Map<String, dynamic>;
                     if (data.containsKey('teeth_chart')) {
@@ -155,24 +160,14 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                       color: cardColor,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(
-                          color: primaryBlue.withOpacity(0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
+                        BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 10, spreadRadius: 2),
                       ],
                     ),
                     child: Column(
                       children: [
-                        const Text(
-                          "Interactive Dental Chart",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
+                        const Text("Interactive Dental Chart", style: TextStyle(fontSize: 16, color: Colors.white)),
                         const SizedBox(height: 15),
-                        const Text(
-                          "Upper Jaw",
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        const Text("Upper Jaw", style: TextStyle(fontSize: 14, color: Colors.grey)),
                         const SizedBox(height: 15),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -180,22 +175,14 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                             children: [
                               for (var i = 1; i <= 16; i++)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                  ),
-                                  child: Uppertooth(
-                                    i,
-                                    teethStates[i.toString()] ?? "none",
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                  child: Uppertooth(i, teethStates[i.toString()] ?? "none"),
                                 ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 15),
-                        const Text(
-                          "Low Jaw",
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        const Text("Low Jaw", style: TextStyle(fontSize: 14, color: Colors.grey)),
                         const SizedBox(height: 15),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -203,13 +190,8 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                             children: [
                               for (var i = 17; i <= 32; i++)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                  ),
-                                  child: Lowertooth(
-                                    i,
-                                    teethStates[i.toString()] ?? "none",
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                  child: Lowertooth(i, teethStates[i.toString()] ?? "none"),
                                 ),
                             ],
                           ),
@@ -224,22 +206,14 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: primaryBlue),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                               ),
                               onPressed: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        Toothchart(patientId: widget.patientId),
-                                  ),
+                                  MaterialPageRoute(builder: (context) => Toothchart(patientId: widget.patientId)),
                                 );
                               },
-                              child: Text(
-                                "View Detailed Chart",
-                                style: TextStyle(color: primaryBlue),
-                              ),
+                              child: Text("View Detailed Chart", style: TextStyle(color: primaryBlue)),
                             ),
                           ),
                         ),
@@ -251,6 +225,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
 
               const SizedBox(height: 20),
 
+              // زر Start New Treatment
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: SizedBox(
@@ -259,26 +234,37 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => TreatmentPlan(patientId: widget.patientId),
-                        ),
+                        MaterialPageRoute(builder: (context) => TreatmentPlan(patientId: widget.patientId)),
                       );
                     },
                     child: const Text(
                       "Start New Treatment",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber[700],
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    icon: const Icon(Icons.receipt_long, color: Colors.white),
+                    label: const Text(
+                      "Add Billing Info",
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () => _showAddBillingSheet(context, currentPatientName),
                   ),
                 ),
               ),
@@ -292,30 +278,16 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                     style: OutlinedButton.styleFrom(
                       backgroundColor: cardColor,
                       side: BorderSide(color: primaryBlue, width: 1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PatientRecord(),
-                        ),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PatientRecord()));
                     },
-                    child: Text(
-                      "View Records",
-                      style: TextStyle(
-                        color: primaryBlue,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text("View Records", style: TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ),
-
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -323,6 +295,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
     );
   }
 
+  // --- Functions المساعدة ---
   Widget _buildContactInfo(IconData icon, String text) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -330,15 +303,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
       children: [
         Icon(icon, color: primaryBlue, size: 20),
         const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
+        Flexible(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 16), overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -368,44 +333,179 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
   Widget _legendItem(String label, Color color) {
     return Row(
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 8),
         Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
       ],
     );
   }
+
+  void _showAddBillingSheet(BuildContext context, String pName) {
+    final TextEditingController serviceController = TextEditingController();
+    final TextEditingController priceController = TextEditingController();
+
+    List<Map<String, dynamic>> servicesList = [];
+    double totalAmount = 0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 20, right: 20, top: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Billing for $pName",
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 15),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: serviceController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: "Service",
+                          labelStyle: const TextStyle(color: Colors.white60),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: primaryBlue, width: 1),
+                          ),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: priceController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: primaryBlue, width: 1),
+                          ),
+                          labelText: "Price",
+                          labelStyle: const TextStyle(color: Colors.white60),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.add_circle, color: primaryBlue, size: 30),
+                      onPressed: () {
+                        if (serviceController.text.isNotEmpty && priceController.text.isNotEmpty) {
+                          setSheetState(() {
+                            servicesList.add({
+                              'serviceName': serviceController.text,
+                              'price': double.parse(priceController.text),
+                            });
+                            totalAmount += double.parse(priceController.text);
+                            serviceController.clear();
+                            priceController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 15),
+
+                if (servicesList.isNotEmpty)
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 150),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: servicesList.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          dense: true,
+                          title: Text(servicesList[index]['serviceName'], style: const TextStyle(color: Colors.white)),
+                          trailing: Text("${servicesList[index]['price']} EGP", style: TextStyle(color: primaryBlue)),
+                          leading: IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                            onPressed: () {
+                              setSheetState(() {
+                                totalAmount -= servicesList[index]['price'];
+                                servicesList.removeAt(index);
+                              });
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                const Divider(color: Colors.white24),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Total:", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text("${totalAmount.toStringAsFixed(2)} EGP",
+                          style: TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  onPressed: servicesList.isEmpty ? null : () async {
+                    await FirebaseFirestore.instance.collection('invoices').add({
+                      'patientId': widget.patientId,
+                      'patientName': pName,
+                      'services': servicesList,
+                      'totalAmount': totalAmount,
+                      'status': 'pending',
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Invoice sent to Receptionist successfully!")),
+                    );
+                  },
+                  child: const Text("Send Full Invoice",
+                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
-// --- ويدجت الأسنان ---
 Widget Uppertooth(int number, String status) {
   Color color = _getToothColor(status);
   return Column(
     mainAxisSize: MainAxisSize.min,
     children: [
       Container(
-        width: 25,
-        height: 40,
+        width: 25, height: 40,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(10),
-            topRight: Radius.circular(10),
-          ),
-          boxShadow: [
-            if (status != "none")
-              BoxShadow(
-                color: color.withOpacity(0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-          ],
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
         ),
       ),
       const SizedBox(height: 4),
@@ -420,22 +520,10 @@ Widget Lowertooth(int number, String status) {
     mainAxisSize: MainAxisSize.min,
     children: [
       Container(
-        width: 25,
-        height: 40,
+        width: 25, height: 40,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(10),
-            bottomRight: Radius.circular(10),
-          ),
-          boxShadow: [
-            if (status != "none")
-              BoxShadow(
-                color: color.withOpacity(0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-          ],
+          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
         ),
       ),
       const SizedBox(height: 4),
@@ -446,15 +534,10 @@ Widget Lowertooth(int number, String status) {
 
 Color _getToothColor(String status) {
   switch (status) {
-    case "cavity":
-      return const Color(0xFFFF4D6D);
-    case "filling":
-      return const Color(0xFF00E5FF);
-    case "crown":
-      return const Color(0xFFFFC300);
-    case "healthy":
-      return const Color(0xFF06D6A0);
-    default:
-      return const Color(0xFF1B263B);
+    case "cavity": return const Color(0xFFFF4D6D);
+    case "filling": return const Color(0xFF00E5FF);
+    case "crown": return const Color(0xFFFFC300);
+    case "healthy": return const Color(0xFF06D6A0);
+    default: return const Color(0xFF1B263B);
   }
 }

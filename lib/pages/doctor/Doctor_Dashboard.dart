@@ -33,7 +33,9 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
     _emergencyStream = FirebaseFirestore.instance
         .collection('emergencies')
         .where('status', isEqualTo: 'waiting')
+
         .snapshots();
+
   }
 
   fetchData() async {
@@ -319,12 +321,21 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               StreamBuilder<QuerySnapshot>(
                 stream: _emergencyStream,
                 builder: (context, snapshot) {
+                  // 1. التحقق من وجود خطأ (مثل عدم وجود Index في Firestore)
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error: ${snapshot.error}", style: TextStyle(color: Colors.white)));
+                  }
+
+                  // 2. التحقق من حالة التحميل
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return SizedBox.shrink(); // أو مؤشر تحميل صغير
+                  }
+
                   int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
-                  var lastEmergency = count > 0
-                      ? snapshot.data!.docs.first.data() as Map<String, dynamic>
-                      : null;
 
                   if (count == 0) return SizedBox.shrink();
+
+                  var lastEmergency = snapshot.data!.docs.first.data() as Map<String, dynamic>;
 
                   return Container(
                     margin: EdgeInsets.symmetric(vertical: 20),
@@ -527,16 +538,39 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                         ),
                                       ],
                                     ),
-                                    Text(
-                                      "Risk Score: ${patient.riskScore}",
-                                      style: TextStyle(
-                                        color: patient.riskScore < 80
-                                            ? Colors.redAccent
-                                            : Colors.greenAccent,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
+                                    StreamBuilder<DocumentSnapshot>(
+                                      stream: FirebaseFirestore.instance
+                                          .collection('users')
+                                          .doc(patient.uid)
+                                          .snapshots(),
+                                      builder: (context, snapshot) {
+                                        if (!snapshot.hasData) {
+                                          return Text(
+                                            "Loading...",
+                                            style: TextStyle(color: Colors.white38, fontSize: 13),
+                                          );
+                                        }
+
+                                        var userData = snapshot.data!.data() as Map<String, dynamic>?;
+
+                                        // ملاحظة: الصورة توضح أن المسار هو oralScore ثم score
+                                        int liveRiskScore = 0;
+                                        if (userData != null && userData['oralScore'] != null) {
+                                          liveRiskScore = (userData['oralScore']['score'] ?? 0).toInt();
+                                        }
+
+                                        return Text(
+                                          "Risk Score: $liveRiskScore",
+                                          style: TextStyle(
+                                            color: liveRiskScore < 80
+                                                ? Colors.redAccent
+                                                : Colors.greenAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        );
+                                      },
+                                    )
                                   ],
                                 ),
                               ],

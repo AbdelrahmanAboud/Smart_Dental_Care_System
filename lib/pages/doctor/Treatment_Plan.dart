@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -12,6 +13,7 @@ class TreatmentPlan extends StatefulWidget {
 }
 
 class _TreatmentPlanState extends State<TreatmentPlan> {
+
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color primaryBlue = const Color(0xFF2EC4FF);
   final Color cardColor = const Color(0xFF112B3C);
@@ -217,24 +219,24 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                               children: selectedTimes
                                   .map(
                                     (time) => Padding(
-                                      padding: EdgeInsets.only(right: 5),
-                                      child: Chip(
-                                        backgroundColor: bgColor,
-                                        label: Text(
-                                          time,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                        onDeleted: () => setState(
-                                          () => selectedTimes.remove(time),
-                                        ),
-                                        deleteIconColor: Colors.redAccent,
-                                        padding: EdgeInsets.zero,
+                                  padding: EdgeInsets.only(right: 5),
+                                  child: Chip(
+                                    backgroundColor: bgColor,
+                                    label: Text(
+                                      time,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
                                       ),
                                     ),
-                                  )
+                                    onDeleted: () => setState(
+                                          () => selectedTimes.remove(time),
+                                    ),
+                                    deleteIconColor: Colors.redAccent,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              )
                                   .toList(),
                             ),
                           ),
@@ -387,7 +389,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                                 size: 20,
                               ),
                               onPressed: () => setState(
-                                () => postVisitInstructions.removeAt(idx),
+                                    () => postVisitInstructions.removeAt(idx),
                               ),
                             ),
                           ],
@@ -420,7 +422,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                               ),
                               decoration: InputDecoration(
                                 hintText:
-                                    "Enter instruction (e.g., Avoid hot beverages)",
+                                "Enter instruction (e.g., Avoid hot beverages)",
                                 hintStyle: TextStyle(
                                   color: Colors.white24,
                                   fontSize: 12,
@@ -461,7 +463,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                                       );
                                     }).toList(),
                                     onChanged: (val) => setState(
-                                      () => selectedHideDuration = val!,
+                                          () => selectedHideDuration = val!,
                                     ),
                                   ),
                                 ),
@@ -526,70 +528,91 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
+                  // ابحث عن زر "Push to Patient App" في الكود بتاعك واستبدل جزء الـ try بهذا الكود المطور:
 
-onPressed: () async {
-  if (medications.isEmpty && postVisitInstructions.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Add at least one medication or instruction"),
-      ),
-    );
-    return;
-  }
-  final medsData = medications.map((med) => {
-        "name": med['name'],
-        "dosage": med['dosage'],
-        "times": List<String>.from(med['times']),
-        "duration": med['duration'],
-        "startDate": (med['startDate'] as DateTime),
-        "taken": List<bool>.filled((med['times'] as List).length, false),
-        "completionPercentage": 0.0,
-      }).toList();
-  final instData = postVisitInstructions.map((inst) => {
-        "text": inst['text'],
-        "duration": inst['duration'],
-        "completed": false,
-      }).toList();
+                  onPressed: () async {
+                    if (medications.isEmpty && postVisitInstructions.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Add at least one medication or instruction")),
+                      );
+                      return;
+                    }
 
-  DateTime validUntilDate;
-  if (medsData.isNotEmpty) {
-    validUntilDate = medsData.map((m) {
-      final start = m['startDate'] as DateTime;
-      final days = m['duration'] as int;
-      return start.add(Duration(days: days));
-    }).reduce((a, b) => a.isAfter(b) ? a : b);
-  } else {
-    validUntilDate = DateTime.now().add(const Duration(days: 7));
-  }
-  try {
-    await FirebaseFirestore.instance
-        .collection('patient_treatments')
-        .doc(widget.patientId)
-        .set({
-      'medications': medsData.map((m) {
-        final map = Map<String, dynamic>.from(m);
-        map['startDate'] = Timestamp.fromDate(map['startDate'] as DateTime);
-        return map;
-      }).toList(),
-      'instructions': instData,
-      'pushedAt': FieldValue.serverTimestamp(),
-      'validUntil': Timestamp.fromDate(validUntilDate),
-    });
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(
-content: Text("Treatment plan sent to patient"),       
- backgroundColor: cardColor,
-      ),
-    );
-    Navigator.of(context).pop();
-  } catch (e) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("error : $e")),
-    );
-  }
-},
+                    // 1. جلب بيانات الدكتور
+                    String? realDoctorName;
+                    final String currentDoctorId = FirebaseAuth.instance.currentUser!.uid;
+                    try {
+                      final doctorDoc = await FirebaseFirestore.instance.collection('users').doc(currentDoctorId).get();
+                      if (doctorDoc.exists) realDoctorName = doctorDoc.data()?['name'];
+                    } catch (e) { debugPrint("Error: $e"); }
+
+                    try {
+                      WriteBatch batch = FirebaseFirestore.instance.batch();
+
+                      // ا. إضافة خطة العلاج العامة (الكود القديم بتاعك)
+                      DocumentReference treatmentRef = FirebaseFirestore.instance.collection('patient_treatments').doc(widget.patientId);
+                      batch.set(treatmentRef, {
+                        'medications': medications.map((m) => {
+                          "name": m['name'],
+                          "dosage": m['dosage'],
+                          "times": List<String>.from(m['times']),
+                          "duration": m['duration'],
+                          "startDate": Timestamp.fromDate(m['startDate'] as DateTime),
+                        }).toList(),
+                        'pushedAt': FieldValue.serverTimestamp(),
+                        'patientId': widget.patientId,
+                        'doctorName': realDoctorName ?? "Doctor",
+                      });
+
+                      // ب. السحر هنا: تحويل كل دواء لتذكير (Reminder) في كولكشن الـ reminders
+                      // استبدل جزء تحويل الوقت القديم بهذا الكود المضمون:
+                      // Inside the Push to Patient button
+                      for (var med in medications) {
+                        for (String timeString in med['times']) {
+                          try {
+                            DateFormat format = DateFormat("h:mm a", "en_US");
+                            DateTime timePart = format.parse(timeString.trim().toUpperCase());
+                            DateTime now = DateTime.now();
+
+                            DateTime firstDose = DateTime(now.year, now.month, now.day, timePart.hour, timePart.minute);
+                            if (firstDose.isBefore(now)) firstDose = firstDose.add(const Duration(days: 1));
+
+                            int durationDays = med['duration'];
+                            DateTime endDate = firstDose.add(Duration(days: durationDays));
+
+                            DocumentReference reminderRef = FirebaseFirestore.instance.collection('reminders').doc();
+                            batch.set(reminderRef, {
+                              'patientId': widget.patientId,
+                              'title': "Medication: ${med['name']}", // English Title
+                              'description': "Dosage: ${med['dosage']}", // English Description
+                              'iconType': 'medication',
+                              'scheduledTime': Timestamp.fromDate(firstDose),
+                              'endDate': Timestamp.fromDate(endDate),
+                              'isDone': false,
+                            });
+                          } catch (e) {
+                            print("Error: $e");
+                          }
+                        }
+                      }
+
+// Success message after pushing
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Treatment plan sent successfully!")),
+                      );
+                      // تنفيذ كل العمليات مرة واحدة
+                      await batch.commit();
+
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Treatment & Reminders pushed successfully!")),
+                      );
+                      Navigator.of(context).pop();
+
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                    }
+                  },
                   icon: Icon(Icons.send, color: Colors.white),
                   label: Text(
                     "Push to Patient App",
@@ -608,117 +631,117 @@ content: Text("Treatment plan sent to patient"),
       ),
     );
   }
-Widget _buildMedicationTable() {
-  if (medications.isEmpty) {
+  Widget _buildMedicationTable() {
+    if (medications.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(30),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.medication_outlined, color: Colors.white24, size: 40),
+            SizedBox(height: 10),
+            Text(
+              "No medications added yet",
+              style: TextStyle(color: Colors.white24),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(30),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Column(
-        children: [
-          Icon(Icons.medication_outlined, color: Colors.white24, size: 40),
-          SizedBox(height: 10),
-          Text(
-            "No medications added yet",
-            style: TextStyle(color: Colors.white24),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          dataRowMinHeight: 50,
+          dataRowMaxHeight: 80,
+          headingRowHeight: 45,
+          headingRowColor: MaterialStateProperty.all(
+            Colors.white.withOpacity(0.05),
           ),
-        ],
+          columnSpacing: 15,
+          columns: [
+            DataColumn(label: Text("Med", style: TextStyle(color: primaryBlue))),
+            DataColumn(label: Text("Dose", style: TextStyle(color: primaryBlue))),
+            DataColumn(label: Text("Times", style: TextStyle(color: primaryBlue))),
+            DataColumn(label: Text("End", style: TextStyle(color: primaryBlue))),
+            DataColumn(label: Text("", style: TextStyle(color: primaryBlue))),
+          ],
+          rows: medications.asMap().entries.map((entry) {
+            int index = entry.key;
+            var med = entry.value;
+            DateTime endDate = med['startDate'].add(
+              Duration(days: med['duration']),
+            );
+
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    med['name'],
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    med['dosage'],
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+                DataCell(
+                  Container(
+                    width: 130,
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: (med['times'] as List).map((time) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: primaryBlue.withOpacity(0.1),
+                            border: Border.all(color: primaryBlue.withOpacity(0.3), width: 0.5),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            time.toString(),
+                            style: TextStyle(color: Colors.white, fontSize: 10),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    DateFormat('dd/MM').format(endDate),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+                DataCell(
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Colors.redAccent.withOpacity(0.8),
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => medications.removeAt(index)),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
-
-  return Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        dataRowMinHeight: 50,
-        dataRowMaxHeight: 80, 
-        headingRowHeight: 45,
-        headingRowColor: MaterialStateProperty.all(
-          Colors.white.withOpacity(0.05),
-        ),
-        columnSpacing: 15, 
-        columns: [
-          DataColumn(label: Text("Med", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("Dose", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("Times", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("End", style: TextStyle(color: primaryBlue))),
-          DataColumn(label: Text("", style: TextStyle(color: primaryBlue))),
-        ],
-        rows: medications.asMap().entries.map((entry) {
-          int index = entry.key;
-          var med = entry.value;
-          DateTime endDate = med['startDate'].add(
-            Duration(days: med['duration']),
-          );
-
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  med['name'],
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ),
-              DataCell(
-                Text(
-                  med['dosage'],
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ),
-              DataCell(
-                Container(
-                  width: 130, 
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: (med['times'] as List).map((time) {
-                      return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: primaryBlue.withOpacity(0.1),
-                          border: Border.all(color: primaryBlue.withOpacity(0.3), width: 0.5),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          time.toString(),
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              DataCell(
-                Text(
-                  DateFormat('dd/MM').format(endDate),
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-              DataCell(
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent.withOpacity(0.8),
-                    size: 18,
-                  ),
-                  onPressed: () => setState(() => medications.removeAt(index)),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    ),
-  );
-}
 }

@@ -166,26 +166,26 @@ class _PatientHomeState extends State<PatientHome> {
                   margin: const EdgeInsets.all(15),
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: status == 'accepted'
+                    color: status == 'Accepted'
                         ? Colors.green.withOpacity(0.2)
                         : Colors.red.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: status == 'accepted' ? Colors.green : Colors.red,
+                      color: status == 'Accepted' ? Colors.green : Colors.red,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        status == 'accepted'
+                        status == 'Accepted'
                             ? Icons.check_circle
                             : Icons.cancel,
-                        color: status == 'accepted' ? Colors.green : Colors.red,
+                        color: status == 'Accepted' ? Colors.green : Colors.red,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          status == 'accepted'
+                          status == 'Accepted'
                               ? "Your emergency request was accepted. Help is on the way!"
                               : "Your request was declined. Please try calling the hospital.",
                           style: const TextStyle(color: Colors.white),
@@ -268,219 +268,143 @@ class _PatientHomeState extends State<PatientHome> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
-                      if (!hasBooking) ...[
-                        Center(
-                          child: Column(
+// الـ StreamBuilder هنا هو المتحكم الوحيد
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('appointments')
+                            .where('patientId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+                            .limit(1)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          // الحالة الأولى: لو مفيش حجز (الداتا فاضية)
+                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            return Center(
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.calendar_today_outlined, color: Colors.white24, size: 40),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    "You haven't booked an appointment yet",
+                                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => _handleBooking(),
+                                    child: Text("Book Now", style: TextStyle(color: primaryBlue)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // الحالة الثانية: لو فيه حجز (بناخد بياناته ديناميكياً)
+                          var doc = snapshot.data!.docs.first;
+                          var data = doc.data() as Map<String, dynamic>;
+
+                          DateTime? date;
+                          if (data['date'] is Timestamp) {
+                            date = (data['date'] as Timestamp).toDate();
+                          } else if (data['date'] is String) {
+                            date = DateTime.tryParse(data['date']);
+                          }
+
+                          String slot = data['slot'] ?? "";
+                          String doctorName = data['doctorName'] ?? "Dr. Emily White";
+                          String status = data['status'] ?? "Pending";
+
+                          String formattedDate = date != null
+                              ? DateFormat('EEEE, dd MMM').format(date)
+                              : "Date Error";
+
+                          return Column(
                             children: [
-                              Icon(
-                                Icons.calendar_today_outlined,
-                                color: Colors.white24,
-                                size: 40,
+                              Row(
+                                children: [
+                                  const Icon(Icons.calendar_month, color: Colors.white, size: 15),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    "$formattedDate at $slot",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: status == 'Accepted' ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      status.toUpperCase(),
+                                      style: TextStyle(
+                                        color: status == 'Accepted' ? Colors.greenAccent : Colors.orangeAccent,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                "You haven't booked an appointment yet",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
+                              const SizedBox(height: 20),
+                              Row(
+                                children: [
+                                  const CircleAvatar(
+                                    radius: 22,
+                                    backgroundImage: AssetImage("lib/assets/doctor.jpeg"),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Dr. $doctorName", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      const Text("Clinic Room 3", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              TextButton(
-                                onPressed: () => _handleBooking(),
-                                child: Text(
-                                  "Book Now",
-                                  style: TextStyle(color: primaryBlue),
-                                ),
+                              const SizedBox(height: 20),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => _handleBooking(),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.white54),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: const Text("Reschedule", style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () async {
+                                        bool confirm = await _showCancelDialog(context);
+                                        if (confirm) {
+                                          await FirebaseFirestore.instance
+                                              .collection('appointments')
+                                              .doc(doc.id)
+                                              .delete();
+                                        }
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.red),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                      ] else ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_month,
-                              color: Colors.white,
-                              size: 15,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              appointmentInfo,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Spacer(),
-                            Icon(
-                              FontAwesomeIcons.clock,
-                              color: primaryBlue,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 22,
-                              backgroundImage: AssetImage(
-                                "lib/assets/doctor.jpeg",
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Dr. Emily White",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  "Clinic Room 3",
-                                  style: TextStyle(color: Colors.white54),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => _handleBooking(),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: Colors.white54),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  "Reschedule",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () async {
-                                  bool confirm = await showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: const Color(0xFF112B3C),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                        side: const BorderSide(
-                                          color: Colors.white10,
-                                        ),
-                                      ),
-                                      title: const Text(
-                                        "Cancel Appointment",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      content: const Text(
-                                        "Are you sure you want to cancel this booking?",
-                                        style: TextStyle(color: Colors.white70),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text(
-                                            "No, Keep it",
-                                            style: TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            right: 8.0,
-                                          ),
-                                          child: ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFFFF4B5C,
-                                              ).withOpacity(0.1),
-                                              foregroundColor: const Color(
-                                                0xFFFF4B5C,
-                                              ),
-                                              elevation: 0,
-                                              side: const BorderSide(
-                                                color: Color(0xFFFF4B5C),
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: Text(
-                                              "Yes, Cancel",
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirm == true) {
-                                    try {
-                                      await FirebaseFirestore.instance
-                                          .collection('appointments')
-                                          .doc(appointmentId)
-                                          .delete();
-                                      setState(() {
-                                        hasBooking = false;
-                                        appointmentInfo =
-                                            "No upcoming appointments";
-                                      });
-
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            "Appointment cancelled successfully",
-                                          ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      print("Error: $e");
-                                    }
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: Colors.red),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  "Cancel",
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -777,7 +701,47 @@ class _PatientHomeState extends State<PatientHome> {
       ),
     );
   }
-
+// ميثود إظهار رسالة تأكيد الإلغاء
+  Future<bool> _showCancelDialog(BuildContext context) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Colors.white10),
+        ),
+        title: const Text(
+          "Cancel Appointment",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          "Are you sure you want to cancel this booking?",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No, Keep it", style: TextStyle(color: Colors.grey)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF4B5C).withOpacity(0.1),
+                foregroundColor: const Color(0xFFFF4B5C),
+                elevation: 0,
+                side: const BorderSide(color: Color(0xFFFF4B5C)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Yes, Cancel", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    ) ?? false; // نرجع false لو اليوزر قفل الـ Dialog من غير ما يختار
+  }
   Widget _quickAccessCard({
     required IconData icon,
     required String title,
