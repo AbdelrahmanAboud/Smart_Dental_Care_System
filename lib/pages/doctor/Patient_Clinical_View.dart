@@ -18,7 +18,7 @@ class PatientClinicalView extends StatefulWidget {
 }
 
 class _PatientClinicalViewState extends State<PatientClinicalView> {
-  String currentPatientName = "Patient"; 
+  String currentPatientName = "Patient";
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +46,7 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
             children: [
               const SizedBox(height: 10),
 
-              // StreamBuilder الأول: لجلب بيانات المريض
+              // StreamBuilder الأول: لجلب بيانات المريض + Risk Score
               StreamBuilder<DocumentSnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
@@ -61,6 +61,12 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                   String? profileUrl = userData['profileImage'];
                   currentPatientName = userData['name'] ?? "Unknown Patient";
 
+                  // ربط الـ Risk Score من الفايربيز
+                  int riskScore = (userData['oralScore']['score'] ?? 0).toInt();
+
+                  // تحديد اللون بناءً على الدرجة
+                  Color riskColor = riskScore >= 80 ? Colors.greenAccent : (riskScore >= 60 ? Colors.orangeAccent : Colors.redAccent);
+
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -71,6 +77,29 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
                     ),
                     child: Column(
                       children: [
+                        // عرض الـ Risk Score Badge
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: riskColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: riskColor.withOpacity(0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.analytics_outlined, color: riskColor, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "Risk: $riskScore%",
+                                  style: TextStyle(color: riskColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(

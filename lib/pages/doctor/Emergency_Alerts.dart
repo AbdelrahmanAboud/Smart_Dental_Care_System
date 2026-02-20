@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -136,17 +137,35 @@ class _EmergencyAlertsState extends State<EmergencyAlerts> {
                                     padding: EdgeInsets.symmetric(vertical: 12),
                                   ),
                                   onPressed: () async {
-                                    print("Accept clicked");
+                                    var user = FirebaseAuth.instance.currentUser;
 
-                                    String docId = docs[index].id;
+                                    if (user == null) return;
 
-                                    await FirebaseFirestore.instance
-                                        .collection('emergencies')
-                                        .doc(docId)
-                                        .update({'status': 'accepted'});
+                                    String currentDoctorId = user.uid;
 
-                                    print("Updated done");
+                                    try {
+                                      await FirebaseFirestore.instance
+                                          .collection('emergencies')
+                                          .doc(docs[index].id) // ✅ استخدم ID الصحيح
+                                          .update({
+                                        'doctorId': currentDoctorId,
+                                        'status': 'Accepted',
+                                        'respondedAt': FieldValue.serverTimestamp(),
+                                      });
+
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text("Emergency Accepted"),
+                                          ),
+                                        );
+                                      }
+
+                                    } catch (e) {
+                                      print("Error accepting emergency: $e");
+                                    }
                                   },
+
 
                                   child: Text(
                                     "Accept",
@@ -175,7 +194,7 @@ class _EmergencyAlertsState extends State<EmergencyAlerts> {
   await FirebaseFirestore.instance
       .collection('emergencies')
       .doc(docs[index].id)
-      .update({'status': 'declined'}); 
+      .update({'status': 'declined'});
 },
                                   child: Text(
                                     "Decline",

@@ -102,7 +102,7 @@ class _PateintProfileState extends State<PateintProfile> {
       dataToEncode['createdAt'] = dataToEncode['createdAt'].toDate().toString();
     }
 
-    String qrData = jsonEncode(dataToEncode);
+    String qrData = userData?["id"] ?? "no-data";
     String imageUrl = userData?['profileImage'] ?? "";
 
     return Scaffold(
@@ -770,7 +770,7 @@ class _PateintProfileState extends State<PateintProfile> {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => PatientFeedback(),
+                                builder: (context) => PatientFeedback( ),
                               ),
                             );
                           },

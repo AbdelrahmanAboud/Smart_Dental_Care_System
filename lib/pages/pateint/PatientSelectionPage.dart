@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_dental_care_system/pages/pateint/ChatBot.dart';
 import 'package:smart_dental_care_system/pages/pateint/ChatScreen.dart';
 
 class PatientSelectionPage extends StatelessWidget {
@@ -101,7 +102,16 @@ class PatientSelectionPage extends StatelessWidget {
                 icon: Icons.auto_awesome,
                 color: const Color(0xFFAD62FF),
                 onTap: () {
-                  print("Go to AI Bot");
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ChatBot(
+                        receiverName: "AI Assistant",
+                        chatId: "ai_bot_room", // معرف خاص بالبوت
+                        isAI: true, // هنضيف المتغير ده للكلاس
+                      ),
+                    ),
+                  );
                 },
               ),
             ],
