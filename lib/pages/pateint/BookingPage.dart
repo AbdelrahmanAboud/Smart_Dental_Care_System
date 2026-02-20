@@ -19,11 +19,49 @@ class _BookingpageState extends State<Bookingpage> {
   List<String> treatments = ['Consultation', 'Cleaning', 'Filling', 'Extraction', 'Root Canal'];
   String selectedTreatment = 'Consultation';
 
+  // متغيرات لاختيار الدكتور
+  List<Map<String, dynamic>> doctors = [];
+  String? selectedDoctorId;
+  String? selectedDoctorName;
+  bool isLoadingDoctors = true;
+
   DateTime focusedDay = DateTime.now();
   DateTime? selectedDay;
   List<String> todaySlots = [];
   String? selectedSlot;
-  bool isLoadingSlots = false; 
+  bool isLoadingSlots = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDoctors(); // جلب الدكاترة عند البداية
+  }
+
+  // دالة جلب الدكاترة من الفايربيز
+  Future<void> _fetchDoctors() async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'Doctor')
+          .get();
+
+      setState(() {
+        doctors = snapshot.docs.map((doc) => {
+          'id': doc.id,
+          'name': doc['name'] ?? 'Unknown Doctor',
+        }).toList();
+
+        if (doctors.isNotEmpty) {
+          selectedDoctorId = doctors[0]['id'];
+          selectedDoctorName = doctors[0]['name'];
+        }
+        isLoadingDoctors = false;
+      });
+    } catch (e) {
+      print("Error fetching doctors: $e");
+      setState(() => isLoadingDoctors = false);
+    }
+  }
 
   Future<void> _fetchSlotsFromFirebase(DateTime date) async {
     setState(() {
@@ -76,6 +114,42 @@ class _BookingpageState extends State<Bookingpage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // اختيار الدكتور أولاً
+              Text(
+                "Select Doctor:",
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: primaryBlue.withOpacity(0.5)),
+                ),
+                child: isLoadingDoctors
+                    ? LinearProgressIndicator(color: primaryBlue, backgroundColor: cardColor)
+                    : DropdownButton<String>(
+                  value: selectedDoctorId,
+                  dropdownColor: cardColor,
+                  isExpanded: true,
+                  underline: SizedBox(),
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  items: doctors.map((doc) {
+                    return DropdownMenuItem<String>(
+                      value: doc['id'],
+                      child: Text(doc['name']),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      selectedDoctorId = newValue;
+                      selectedDoctorName = doctors.firstWhere((d) => d['id'] == newValue)['name'];
+                    });
+                  },
+                ),
+              ),
+              SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -237,28 +311,44 @@ class _BookingpageState extends State<Bookingpage> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () async {
-              if (selectedSlot != null && selectedDay != null) {
+              if (selectedSlot != null && selectedDay != null && selectedDoctorId != null) {
                 try {
                   String uid = FirebaseAuth.instance.currentUser!.uid;
                   DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
                   Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
                   String patientName = data['name'] ?? "Unknown Patient";
-                  var riskScore = data.containsKey('riskScore') ? data['riskScore'] : 0;
 
-                  await FirebaseFirestore.instance.collection('appointments').doc(uid).set({
+                  // جلب الـ score من الهيكل oralScore -> score كما بالصور السابقة
+                  var riskScore = 0;
+                  if (data['oralScore'] != null && data['oralScore']['score'] != null) {
+                    riskScore = data['oralScore']['score'];
+                  }
+
+                  // حفظ الموعد في الفايربيز مع ايدي الدكتور واسمه
+                  await FirebaseFirestore.instance.collection('appointments').add({
                     'patientId': uid,
                     'patientName': patientName,
+                    'doctorId': selectedDoctorId, // الدكتور المختار
+                    'doctorName': selectedDoctorName,
                     'riskScore': riskScore,
                     'date': selectedDay,
                     'slot': selectedSlot,
-                    'treatment': selectedTreatment,
+                    'type': selectedTreatment, // حفظها كـ type عشان الـ Analytics
                     'createdAt': FieldValue.serverTimestamp(),
+                    'status': 'Pending',
+                  });
+
+                  // تحديث assignedDoctorId للمريض لكي يظهر في الـ Analytics الخاص بالدكتور
+                  await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                    'assignedDoctorId': selectedDoctorId,
                   });
 
                   showBookingDialog(context, selectedSlot!, selectedDay!);
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
                 }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a doctor and a time slot")));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -339,13 +429,8 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                 SizedBox(height: 35),
                 GestureDetector(
                   onTap: () {
-                    String userUid = FirebaseAuth.instance.currentUser!.uid;
                     Navigator.of(context).pop();
-                    Navigator.of(context).pop({
-                      'selectedDate': date,
-                      'selectedSlot': slot,
-                      'appointmentId': userUid,
-                    });
+                    Navigator.of(context).pop();
                   },
                   child: Container(
                     width: double.infinity,

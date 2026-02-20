@@ -1,5 +1,8 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:smart_dental_care_system/data/PateintModels/RiskScoreModel.dart';
+import 'Assessment Survey.dart';
 
 class RiskScore extends StatefulWidget {
   static const Color bgColor = Color(0xFF0B1C2D);
@@ -12,6 +15,64 @@ class RiskScore extends StatefulWidget {
 }
 
 class _OralScoreState extends State<RiskScore> {
+  Map<String, dynamic>? oralData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOralScore();
+  }
+
+  Future<void> _fetchOralScore() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (doc.exists && doc.data()!.containsKey('oralScore')) {
+        setState(() {
+          oralData = doc.data()!['oralScore'];
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("Error: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  // --- دالة توليد النصائح الذكية بناءً على البيانات ---
+  List<String> _generateAITips() {
+    if (oralData == null) return ["Complete your assessment to get AI tips."];
+
+    List<String> tips = [];
+    int cavity = oralData!['cavityRisk'] ?? 0;
+    int gum = oralData!['gumRisk'] ?? 0;
+    int hygiene = oralData!['hygieneScore'] ?? 0;
+
+    // نصيحة بناءً على التسوس
+    if (cavity > 50) {
+      tips.add("High cavity risk detected: Use fluoride toothpaste and limit sugar.");
+    }
+    // نصيحة بناءً على اللثة
+    if (gum > 50) {
+      tips.add("Gum sensitivity noted: Use a soft-bristled brush and floss gently.");
+    }
+    // نصيحة بناءً على النظافة العامة
+    if (hygiene < 60) {
+      tips.add("Improve hygiene: Ensure you're brushing for a full 2 minutes.");
+    } else {
+      tips.add("Great hygiene habits! Keep up the consistent flossing.");
+    }
+
+    // نصائح عامة ثابتة لتكملة القائمة
+    tips.add("Visit your dentist every 6 months for a professional cleaning.");
+
+    return tips;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -21,22 +82,21 @@ class _OralScoreState extends State<RiskScore> {
         backgroundColor: RiskScore.bgColor,
         elevation: 0,
         leading: IconButton(
-          icon:  Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title:  Text(
-          "Oral Score",
-          style: TextStyle(color: Colors.white),
-        ),
-        actions:  [
+        title: const Text("Oral Score", style: TextStyle(color: Colors.white)),
+        actions: const [
           Padding(
             padding: EdgeInsets.only(right: 15),
             child: Icon(Icons.notifications_none, color: Colors.white),
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding:  EdgeInsets.all(14),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.cyanAccent))
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -44,18 +104,16 @@ class _OralScoreState extends State<RiskScore> {
             const SizedBox(height: 24),
             const Text(
               "Risk Breakdown",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600),
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 14),
-            riskBar("Cavity Risk", oralRiskFake.cavityRisk),
-            riskBar("Gum Disease", oralRiskFake.gumRisk),
-            riskBar("Enamel Health", oralRiskFake.enamelRisk),
-            riskBar("Oral Hygiene", oralRiskFake.hygieneScore),
+            riskBar("Cavity Risk", oralData?['cavityRisk'] ?? 0),
+            riskBar("Gum Disease", oralData?['gumRisk'] ?? 0),
+            riskBar("Enamel Health", oralData?['enamelRisk'] ?? 0),
+            riskBar("Oral Hygiene", oralData?['hygieneScore'] ?? 0),
             const SizedBox(height: 20),
             _tipsCard(),
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -63,9 +121,9 @@ class _OralScoreState extends State<RiskScore> {
   }
 
   Widget _scoreCard() {
-    final double score = oralRiskFake.score.toDouble();
-    final Color scoreColor = getScoreColor(score);
-    final String riskLevelText = getRiskLevelText(score);
+    final int score = oralData?['score'] ?? 0;
+    final Color scoreColor = getScoreColor(score.toDouble());
+    final String riskLevelText = getRiskLevelText(score.toDouble());
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -75,19 +133,14 @@ class _OralScoreState extends State<RiskScore> {
         border: Border.all(color: Colors.white10),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            "Your Oral Health Score",
-            style: TextStyle(color: Colors.white70),
-          ),
+          const Text("Your Oral Health Score", style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 20),
           Stack(
             alignment: Alignment.center,
             children: [
               SizedBox(
-                height: 170,
-                width: 170,
+                height: 170, width: 170,
                 child: CircularProgressIndicator(
                   value: score / 100,
                   strokeWidth: 12,
@@ -97,17 +150,8 @@ class _OralScoreState extends State<RiskScore> {
               ),
               Column(
                 children: [
-                  Text(
-                    oralRiskFake.score.toString(),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  const Text(
-                    "OUT OF 100",
-                    style: TextStyle(color: Colors.white38, fontSize: 11),
-                  )
+                  Text("$score", style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+                  const Text("OUT OF 100", style: TextStyle(color: Colors.white38, fontSize: 11)),
                 ],
               )
             ],
@@ -115,20 +159,25 @@ class _OralScoreState extends State<RiskScore> {
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: scoreColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              riskLevelText,
-              style: TextStyle(
-                  color: scoreColor, fontWeight: FontWeight.bold),
-            ),
+            decoration: BoxDecoration(color: scoreColor.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+            child: Text(riskLevelText, style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            "+ ${oralRiskFake.monthlyImprovement} points this month",
-            style: TextStyle(color: scoreColor, fontSize: 12),
+          const SizedBox(height: 15),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.cyanAccent.withOpacity(0.1),
+              side: const BorderSide(color: Colors.cyanAccent),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              minimumSize: const Size(double.infinity, 45),
+            ),
+            icon: const Icon(Icons.auto_awesome, color: Colors.cyanAccent, size: 18),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AssessmentSurvey()),
+              ).then((_) => _fetchOralScore());
+            },
+            label: const Text("Retake AI Assessment", style: TextStyle(color: Colors.cyanAccent)),
           )
         ],
       ),
@@ -136,6 +185,8 @@ class _OralScoreState extends State<RiskScore> {
   }
 
   Widget _tipsCard() {
+    final List<String> aiTips = _generateAITips();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -143,27 +194,29 @@ class _OralScoreState extends State<RiskScore> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "AI Oral Care Tips",
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w600),
+          Row(
+            children: const [
+              Icon(Icons.lightbulb_outline, color: Colors.amber, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "Personalized AI Tips",
+                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
-          SizedBox(height: 12),
-          TipRow("Brush twice daily for 2 minutes"),
-          TipRow("Floss at least once per day"),
-          TipRow("Reduce sugary intake especially before bed"),
-          TipRow("Visit your dentist every 6 months"),
-          TipRow("Consider using fluoride mouthwash"),
+          const SizedBox(height: 16),
+          // عرض النصائح المتولدة ديناميكياً
+          ...aiTips.map((tip) => TipRow(tip)).toList(),
         ],
       ),
     );
   }
 }
+
+// --- الـ Helper Widgets (تظل كما هي أو تعديلات بسيطة للجمالية) ---
 
 Widget riskBar(String title, int value) {
   final Color color = getScoreColor(value.toDouble());
@@ -182,14 +235,14 @@ Widget riskBar(String title, int value) {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title, style: const TextStyle(color: Colors.white70)),
-            Text("$value%", style: TextStyle(color: color)),
+            Text("$value%", style: TextStyle(color: color, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
-            value: value / 100,
+            value: (value / 100).clamp(0.0, 1.0),
             minHeight: 8,
             backgroundColor: Colors.white12,
             valueColor: AlwaysStoppedAnimation(color),
@@ -207,15 +260,19 @@ class TipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.circle, size: 6, color: Colors.greenAccent),
-          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Icon(Icons.check_circle_outline, size: 14, color: Colors.greenAccent),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
             ),
           ),
         ],
@@ -235,3 +292,5 @@ String getRiskLevelText(double score) {
   if (score >= 50) return "Moderate Risk";
   return "High Risk";
 }
+
+

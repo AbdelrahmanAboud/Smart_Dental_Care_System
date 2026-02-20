@@ -19,6 +19,7 @@ class TreatmentPlan extends StatefulWidget {
 }
 
 class _TreatmentPlanState extends State<TreatmentPlan> {
+
   final Color bgColor = const Color(0xFF0B1C2D);
   final Color primaryBlue = const Color(0xFF2EC4FF);
   final Color cardColor = const Color(0xFF112B3C);
@@ -490,24 +491,24 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                               children: selectedTimes
                                   .map(
                                     (time) => Padding(
-                                      padding: EdgeInsets.only(right: 5),
-                                      child: Chip(
-                                        backgroundColor: bgColor,
-                                        label: Text(
-                                          time,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                        onDeleted: () => setState(
-                                          () => selectedTimes.remove(time),
-                                        ),
-                                        deleteIconColor: Colors.redAccent,
-                                        padding: EdgeInsets.zero,
+                                  padding: EdgeInsets.only(right: 5),
+                                  child: Chip(
+                                    backgroundColor: bgColor,
+                                    label: Text(
+                                      time,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
                                       ),
                                     ),
-                                  )
+                                    onDeleted: () => setState(
+                                          () => selectedTimes.remove(time),
+                                    ),
+                                    deleteIconColor: Colors.redAccent,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              )
                                   .toList(),
                             ),
                           ),
@@ -660,7 +661,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                                 size: 20,
                               ),
                               onPressed: () => setState(
-                                () => postVisitInstructions.removeAt(idx),
+                                    () => postVisitInstructions.removeAt(idx),
                               ),
                             ),
                           ],
@@ -692,7 +693,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                               ),
                               decoration: InputDecoration(
                                 hintText:
-                                    "Enter instruction (e.g., Avoid hot beverages)",
+                                "Enter instruction (e.g., Avoid hot beverages)",
                                 hintStyle: TextStyle(
                                   color: Colors.white24,
                                   fontSize: 12,
@@ -732,7 +733,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                                       );
                                     }).toList(),
                                     onChanged: (val) => setState(
-                                      () => selectedHideDuration = val!,
+                                          () => selectedHideDuration = val!,
                                     ),
                                   ),
                                 ),
@@ -797,6 +798,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
+                  // ابحث عن زر "Push to Patient App" في الكود بتاعك واستبدل جزء الـ try بهذا الكود المطور:
 
                   onPressed: () async {
                     if (medications.isEmpty && postVisitInstructions.isEmpty) {
@@ -810,6 +812,7 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                       return;
                     }
 
+<<// 1. إظهار مؤشر التحميل (من كود صاحبك)
                     showDialog(
                       context: context,
                       barrierDismissible: false,
@@ -819,92 +822,115 @@ class _TreatmentPlanState extends State<TreatmentPlan> {
                     );
 
                     try {
-                      String formattedDate = DateFormat(
-                        'MMM dd, yyyy',
-                      ).format(DateTime.now());
+                      // 2. تجهيز البيانات الأساسية
                       final currentUser = FirebaseAuth.instance.currentUser;
-                      final doctorName = currentUser?.displayName ?? "Doctor";
-                      String? fileUrl;
+                      String? realDoctorName;
+                      final String currentDoctorId = currentUser!.uid;
+                      
+                      // جلب اسم الدكتور الفعلي (من كودك)
+                      try {
+                        final doctorDoc = await FirebaseFirestore.instance.collection('users').doc(currentDoctorId).get();
+                        if (doctorDoc.exists) realDoctorName = doctorDoc.data()?['name'];
+                      } catch (e) { debugPrint("Error fetching doctor name: $e"); }
 
+                      final String doctorNameForHistory = realDoctorName ?? (currentUser.displayName ?? "Doctor");
+
+                      // 3. رفع الملف لـ Cloudinary لو موجود (من كود صاحبك)
+                      String? fileUrl;
                       if (_selectedFile != null) {
                         fileUrl = await uploadToCloudinary(_selectedFile!);
                       }
 
-                      final batch = FirebaseFirestore.instance.batch();
+                      // 4. ابدأ الـ Batch لضمان تسجيل كل شيء معاً
+                      WriteBatch batch = FirebaseFirestore.instance.batch();
 
-                      final medsData = medications
-                          .map(
-                            (med) => {
-                              'name': med['name'],
-                              'dosage': med['dosage'],
-                              'times': med['times'],
-                              'duration': med['duration'],
-                              'startDate': med['startDate'],
-                            },
-                          )
-                          .toList();
+                      // أ. تجهيز بيانات الأدوية (Medications)
+                      final medsData = medications.map((m) => {
+                        "name": m['name'],
+                        "dosage": m['dosage'],
+                        "times": List<String>.from(m['times']),
+                        "duration": m['duration'],
+                        "startDate": Timestamp.fromDate(m['startDate'] as DateTime),
+                      }).toList();
 
-                      final instData = postVisitInstructions
-                          .map(
-                            (inst) => {
-                              'text': inst['text'],
-                              'duration': inst['duration'],
-                            },
-                          )
-                          .toList();
+                      // ب. تجهيز بيانات التعليمات (Instructions - من كود صاحبك)
+                      final instData = postVisitInstructions.map((inst) => {
+                        'text': inst['text'],
+                        'duration': inst['duration'],
+                      }).toList();
 
-                      final treatmentRef = FirebaseFirestore.instance
-                          .collection('patient_treatments')
-                          .doc(widget.patientId);
-
+                      // ج. تحديث خطة العلاج (patient_treatments)
+                      DocumentReference treatmentRef = FirebaseFirestore.instance.collection('patient_treatments').doc(widget.patientId);
                       batch.set(treatmentRef, {
                         'medications': medsData,
-                        'instructions': instData,
+                        'instructions': instData, // ميزة صاحبك
                         'pushedAt': FieldValue.serverTimestamp(),
+                        'patientId': widget.patientId,
+                        'doctorName': doctorNameForHistory,
                       });
 
-                      final historyRef = FirebaseFirestore.instance
+                      // د. إضافة سجل الزيارة (patient_records - ميزة صاحبك)
+                      DocumentReference historyRef = FirebaseFirestore.instance
                           .collection('patient_records')
                           .doc(widget.patientId)
                           .collection('visits')
                           .doc();
-
+                      
                       batch.set(historyRef, {
-                        'doctorName': doctorName,
-                        'date': DateFormat(
-                          'MMM dd, yyyy',
-                        ).format(DateTime.now()),
+                        'doctorName': doctorNameForHistory,
+                        'date': DateFormat('MMM dd, yyyy').format(DateTime.now()),
                         'status': visitStatus,
                         'notes': notesController.text.trim(),
                         'visitType': visitTypeController.text.trim(),
-                        'attachmentUrl': _selectedFile != null
-                            ? await uploadToCloudinary(_selectedFile!)
-                            : null,
-                        'attachmentName': _selectedFile != null
-                            ? _selectedFile!.path.split('/').last
-                            : null,
+                        'attachmentUrl': fileUrl,
+                        'attachmentName': _selectedFile != null ? _selectedFile!.path.split('/').last : null,
                         'createdAt': FieldValue.serverTimestamp(),
                       });
 
+                      // هـ. تحويل الأدوية لتذكيرات (Reminders - شغلك الأساسي)
+                      for (var med in medications) {
+                        for (String timeString in med['times']) {
+                          try {
+                            DateFormat format = DateFormat("h:mm a", "en_US");
+                            DateTime timePart = format.parse(timeString.trim().toUpperCase());
+                            DateTime now = DateTime.now();
+                            DateTime firstDose = DateTime(now.year, now.month, now.day, timePart.hour, timePart.minute);
+                            if (firstDose.isBefore(now)) firstDose = firstDose.add(const Duration(days: 1));
+
+                            int durationDays = med['duration'];
+                            DateTime endDate = firstDose.add(Duration(days: durationDays));
+
+                            DocumentReference reminderRef = FirebaseFirestore.instance.collection('reminders').doc();
+                            batch.set(reminderRef, {
+                              'patientId': widget.patientId,
+                              'title': "Medication: ${med['name']}",
+                              'description': "Dosage: ${med['dosage']}",
+                              'iconType': 'medication',
+                              'scheduledTime': Timestamp.fromDate(firstDose),
+                              'endDate': Timestamp.fromDate(endDate),
+                              'isDone': false,
+                            });
+                          } catch (e) { print("Reminder Error: $e"); }
+                        }
+                      }
+
+                      // 5. تنفيذ الـ Batch كاملاً
                       await batch.commit();
 
+                      // 6. إغلاق الـ Loading والرجوع للخلف مع رسالة نجاح
                       if (context.mounted) {
-                        Navigator.of(context, rootNavigator: true).pop();
+                        Navigator.of(context, rootNavigator: true).pop(); // إغلاق الـ Dialog
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Visit recorded successfully!"),
-                          ),
+                          const SnackBar(content: Text("Treatment, History & Reminders pushed successfully!")),
                         );
-                        Navigator.of(context).pop();
+                        Navigator.of(context).pop(); // العودة للشاشة السابقة
                       }
-                    } catch (e) {
-                      if (context.mounted)
-                        Navigator.of(context, rootNavigator: true).pop();
 
-                      print("Error during saving: $e");
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Error: ${e.toString()}")),
-                      );
+                    } catch (e) {
+                      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+                      print("General Error: $e");
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                    }
                     }
                   },
                   icon: Icon(Icons.send, color: Colors.white),

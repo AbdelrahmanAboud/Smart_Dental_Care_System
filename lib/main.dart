@@ -24,20 +24,22 @@ final Color primaryBlue = const Color(0xFF2EC4FF);
 final Color cardColor = const Color(0xFF112B3C);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-FirebaseDatabase.instance.databaseURL = "https://smart-dental-care-system-622e0-default-rtdb.europe-west1.firebasedatabase.app/";
-  testFirestore(); 
-  testRealtime();  
-  
+  FirebaseDatabase.instance.databaseURL = "https://smart-dental-care-system-622e0-default-rtdb.europe-west1.firebasedatabase.app/";
+  testFirestore();
+  testRealtime();
+
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Login(),
-    )
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Login(),
+      )
+
   );
 }
 
@@ -57,4 +59,3 @@ void testFirestore() async {
     print("Firestore error: $e");
   }
 }
-

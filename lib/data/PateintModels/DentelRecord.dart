@@ -3,6 +3,8 @@ class DentalRecord {
   final String doctorName;
   final String visitType;
   final String notes;
+  final String status;
+  final String? attachmentUrl;
   final String status; 
   final String? attachmentUrl; // أضف هذا السطر
 
