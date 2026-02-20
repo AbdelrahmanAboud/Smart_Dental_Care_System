@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_dental_care_system/data/DoctorModels/PatientAppointment.dart';
+import 'package:smart_dental_care_system/pages/doctor/DoctorChatList.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Analytics.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Emergency_Alerts.dart';
@@ -161,6 +162,10 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               );
               break;
             case 3:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => DoctorChatList()),
+              );
               break;
           }
         },

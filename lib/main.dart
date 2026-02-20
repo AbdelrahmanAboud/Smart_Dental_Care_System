@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_dental_care_system/firebase_options.dart';
+import 'package:smart_dental_care_system/pages/doctor/AddRecordPage.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
 import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
@@ -24,6 +25,7 @@ final Color cardColor = const Color(0xFF112B3C);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -37,6 +39,7 @@ void main() async {
         debugShowCheckedModeBanner: false,
         home: Login(),
       )
+
   );
 }
 

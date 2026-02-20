@@ -68,11 +68,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (snapshot.hasData &&
                         snapshot.data!.snapshot.value != null) {
                       Map<dynamic, dynamic> map =
-                      snapshot.data!.snapshot.value
-                      as Map<dynamic, dynamic>;
+                          snapshot.data!.snapshot.value
+                              as Map<dynamic, dynamic>;
                       var sortedKeys = map.keys.toList()
                         ..sort(
-                              (a, b) => (map[a]['timestamp'] ?? 0).compareTo(
+                          (a, b) => (map[a]['timestamp'] ?? 0).compareTo(
                             map[b]['timestamp'] ?? 0,
                           ),
                         );
@@ -88,7 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           var msg = map[sortedKeys[index]];
                           bool isMe =
                               msg['senderId'] ==
-                                  FirebaseAuth.instance.currentUser?.uid;
+                              FirebaseAuth.instance.currentUser?.uid;
                           return _buildMessageBubble(
                             msg['text'],
                             isMe,
@@ -163,10 +163,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         : null,
                     child: (imageUrl == null || imageUrl.isEmpty)
                         ? const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 20,
-                    )
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          )
                         : null,
                   );
                 },

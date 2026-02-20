@@ -341,159 +341,159 @@ class _PatientClinicalViewState extends State<PatientClinicalView> {
   }
 
   void _showAddBillingSheet(BuildContext context, String pName) {
-    final TextEditingController serviceController = TextEditingController();
-    final TextEditingController priceController = TextEditingController();
+  final TextEditingController serviceController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  
+  List<Map<String, dynamic>> servicesList = [];
+  double totalAmount = 0;
 
-    List<Map<String, dynamic>> servicesList = [];
-    double totalAmount = 0;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: cardColor,
+    shape:  RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+    ),
+    builder: (context) => StatefulBuilder( 
+      builder: (context, setSheetState) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 20, right: 20, top: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Billing for $pName",
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+               SizedBox(height: 15),
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              left: 20, right: 20, top: 20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Billing for $pName",
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: serviceController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: "Service",
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: primaryBlue, width: 1),
-                          ),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
-                        ),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: serviceController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: "Service",
+                        labelStyle:  TextStyle(color: Colors.white60),
+     focusedBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: primaryBlue, width: 1),
+    ),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: priceController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: primaryBlue, width: 1),
-                          ),
-                          labelText: "Price",
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
-                        ),
+                  ),
+                   SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      style:  TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+     focusedBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: primaryBlue, width: 1), 
+    ),
+                        labelText: "Price",
+                        labelStyle:  TextStyle(color: Colors.white60),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue.withOpacity(0.3))),
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.add_circle, color: primaryBlue, size: 30),
-                      onPressed: () {
-                        if (serviceController.text.isNotEmpty && priceController.text.isNotEmpty) {
-                          setSheetState(() {
-                            servicesList.add({
-                              'serviceName': serviceController.text,
-                              'price': double.parse(priceController.text),
-                            });
-                            totalAmount += double.parse(priceController.text);
-                            serviceController.clear();
-                            priceController.clear();
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle, color: primaryBlue, size: 30),
+                    onPressed: () {
+                      if (serviceController.text.isNotEmpty && priceController.text.isNotEmpty) {
+                        setSheetState(() {
+                          servicesList.add({
+                            'serviceName': serviceController.text,
+                            'price': double.parse(priceController.text),
                           });
-                        }
-                      },
-                    ),
+                          totalAmount += double.parse(priceController.text);
+                          serviceController.clear();
+                          priceController.clear();
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+
+               SizedBox(height: 15),
+
+              if (servicesList.isNotEmpty)
+                Container(
+                  constraints:  BoxConstraints(maxHeight: 150),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: servicesList.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        dense: true,
+                        title: Text(servicesList[index]['serviceName'], style: const TextStyle(color: Colors.white)),
+                        trailing: Text("${servicesList[index]['price']} EGP", style: TextStyle(color: primaryBlue)),
+                        leading: IconButton(
+                          icon:  Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                          onPressed: () {
+                            setSheetState(() {
+                              totalAmount -= servicesList[index]['price'];
+                              servicesList.removeAt(index);
+                            });
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+              const Divider(color: Colors.white24),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                     Text("Total:", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text("${totalAmount.toStringAsFixed(2)} EGP", 
+                      style: TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
+              ),
 
-                const SizedBox(height: 15),
-
-                if (servicesList.isNotEmpty)
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 150),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: servicesList.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          dense: true,
-                          title: Text(servicesList[index]['serviceName'], style: const TextStyle(color: Colors.white)),
-                          trailing: Text("${servicesList[index]['price']} EGP", style: TextStyle(color: primaryBlue)),
-                          leading: IconButton(
-                            icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
-                            onPressed: () {
-                              setSheetState(() {
-                                totalAmount -= servicesList[index]['price'];
-                                servicesList.removeAt(index);
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                const Divider(color: Colors.white24),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Total:", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text("${totalAmount.toStringAsFixed(2)} EGP",
-                          style: TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  minimumSize:  Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 ),
-
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  onPressed: servicesList.isEmpty ? null : () async {
-                    await FirebaseFirestore.instance.collection('invoices').add({
-                      'patientId': widget.patientId,
-                      'patientName': pName,
-                      'services': servicesList,
-                      'totalAmount': totalAmount,
-                      'status': 'pending',
-                      'timestamp': FieldValue.serverTimestamp(),
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Invoice sent to Receptionist successfully!")),
-                    );
-                  },
-                  child: const Text("Send Full Invoice",
-                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+                onPressed: servicesList.isEmpty ? null : () async {
+                  await FirebaseFirestore.instance.collection('invoices').add({
+                    'patientId': widget.patientId,
+                    'patientName': pName,
+                    'services': servicesList, 
+                    'totalAmount': totalAmount,
+                    'status': 'pending',
+                    'timestamp': FieldValue.serverTimestamp(),
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Invoice sent to Receptionist successfully!")),
+                  );
+                },
+                child:  Text("Send Full Invoice", 
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    ),
+  );
+}
 }
 
 Widget Uppertooth(int number, String status) {

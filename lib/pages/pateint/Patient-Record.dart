@@ -142,28 +142,27 @@ class _PatientRrecordState extends State<PatientRecord> {
 
                 List<DentalRecord> visits = snapshot.data!.docs
                     .map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return DentalRecord(
-                    date: data['date'] ?? "",
-                    doctorName: data['doctorName'] ?? "",
-                    visitType: data['visitType'] ?? "",
-                    notes: data['notes'] ?? "",
-                    status: data['status'] ?? "Pending",
-                    attachmentUrl: data['attachmentUrl'],
-                  );
-                })
+                      final data = doc.data() as Map<String, dynamic>;
+                      return DentalRecord(
+                        date: data['date'] ?? "",
+                        doctorName: data['doctorName'] ?? "",
+                        visitType: data['visitType'] ?? "",
+                        notes: data['notes'] ?? "",
+                        status: data['status'] ?? "Pending",
+                        attachmentUrl: data['attachmentUrl'],
+                      );
+                    })
                     .where(
                       (record) =>
-                  record.doctorName.toLowerCase().contains(
-                    _searchQuery,
-                  ) ||
-
-                      record.visitType.toLowerCase().contains(
-                        _searchQuery,
-                      ) ||
-                      record.date.toLowerCase().contains(_searchQuery) ||
-                      record.status.toLowerCase().contains(_searchQuery),
-                )
+                          record.doctorName.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          record.visitType.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          record.date.toLowerCase().contains(_searchQuery) ||
+                          record.status.toLowerCase().contains(_searchQuery),
+                    )
                     .toList();
 
                 return ListView.builder(

@@ -6,27 +6,27 @@ import 'package:smart_dental_care_system/pages/pateint/ChatScreen.dart';
 
 class PatientSelectionPage extends StatelessWidget {
   const PatientSelectionPage({super.key});
-  final Color bgColor = const Color(0xFF0B1C2D);
+    final Color bgColor = const Color(0xFF0B1C2D);
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
 
-  void _goToChat(BuildContext context, String targetName, String targetId) {
-    final String myId = FirebaseAuth.instance.currentUser?.uid ?? "unknown";
+ void _goToChat(BuildContext context, String targetName, String targetId) {
+  final String myId = FirebaseAuth.instance.currentUser?.uid ?? "unknown";
 
-    List<String> ids = [myId, targetId];
-    ids.sort();
-    String roomId = ids.join("_");
+  List<String> ids = [myId, targetId];
+  ids.sort(); 
+  String roomId = ids.join("_");
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          receiverName: targetName,
-          chatId: roomId,
-        ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ChatScreen(
+        receiverName: targetName, 
+        chatId: roomId, 
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -41,17 +41,17 @@ class PatientSelectionPage extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
       ),
-      body: Padding(
+     body: Padding(
         padding:  EdgeInsets.all(20.0),
-        child: SingleChildScrollView(
+        child: SingleChildScrollView( 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 40),
-              Text("How can we help you?",
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-              SizedBox(height: 40),
-
+               SizedBox(height: 40),
+               Text("How can we help you?", 
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+               SizedBox(height: 40),
+              
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
@@ -62,7 +62,7 @@ class PatientSelectionPage extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return  SizedBox();
+                    return  SizedBox(); 
                   }
 
                   return Column(
@@ -76,7 +76,7 @@ class PatientSelectionPage extends StatelessWidget {
                           subtitle: "Medical questions ",
                           icon: Icons.medical_services_outlined,
                           color: const Color(0xFF00F5FF),
-                          onTap: () => _goToChat(context, doctorData['name'], doc.id),
+                          onTap: () => _goToChat(context, doctorData['name'], doc.id), 
                         ),
                       );
                     }).toList(),
@@ -92,9 +92,9 @@ class PatientSelectionPage extends StatelessWidget {
                 color: const Color(0xFF4361EE),
                 onTap: () => _goToChat(context, "Reception", "receptionist_fixed_id"),
               ),
-
+              
               const SizedBox(height: 20),
-
+              
               _buildCard(
                 context,
                 title: "AI Dental Assistant",
@@ -122,13 +122,13 @@ class PatientSelectionPage extends StatelessWidget {
   }
 
   Widget _buildCard(
-      BuildContext context, {
-        required String title,
-        required String subtitle,
-        required IconData icon,
-        required Color color,
-        required VoidCallback onTap,
-      }) {
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

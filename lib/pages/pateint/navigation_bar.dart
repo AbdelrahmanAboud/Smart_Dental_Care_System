@@ -21,12 +21,13 @@ class _NavigitionBarState extends State<NavigitionBar> {
   late final List<Widget> _pages;
 
   @override
+  @override
   void initState() {
     super.initState();
     _pages = [
       PatientHome(),
       PatientRecord(),
-       PatientReminders(),
+      PatientReminders(),
       PatientSelectionPage(
       ),
     ];
