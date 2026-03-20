@@ -8,14 +8,19 @@ class VisitDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filteredRecords = financialrecord.where((f) => f.date == visitDate).toList();
+    final filteredRecords = financialrecord
+        .where((f) => f.date == visitDate)
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B1C2D),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("Visit Details", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Visit Details",
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -69,19 +74,18 @@ class VisitDetailsPage extends StatelessWidget {
 
 Widget FinancialCard(FinancialRecord record) {
   return Container(
-    margin:  EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
     decoration: BoxDecoration(
-      color:  Color(0xFF112B3C),
+      color: Color(0xFF112B3C),
       borderRadius: BorderRadius.circular(16),
     ),
     child: ExpansionTile(
-      
       iconColor: Colors.white,
       collapsedIconColor: Colors.grey,
-      shape:  RoundedRectangleBorder(side: BorderSide.none),
-      collapsedShape:  RoundedRectangleBorder(side: BorderSide.none),
+      shape: RoundedRectangleBorder(side: BorderSide.none),
+      collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
       leading: Container(
-        padding:  EdgeInsets.all(8),
+        padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: record.iconColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
@@ -90,7 +94,7 @@ Widget FinancialCard(FinancialRecord record) {
       ),
       title: Text(
         record.title,
-        style:  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -100,28 +104,28 @@ Widget FinancialCard(FinancialRecord record) {
                 ? "\$${record.totalAmount.toStringAsFixed(2)}"
                 : "Plan",
             style: TextStyle(
-              color: record.isInvoice ?  Color(0xFF2EC4FF) : Colors.greenAccent,
+              color: record.isInvoice ? Color(0xFF2EC4FF) : Colors.greenAccent,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
           ),
-           SizedBox(width: 8),
-           Icon(Icons.expand_more, color: Colors.grey, size: 18),
+          SizedBox(width: 8),
+          Icon(Icons.expand_more, color: Colors.grey, size: 18),
         ],
       ),
       children: record.items.map((service) {
         return Padding(
-          padding:  EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 service.name,
-                style:  TextStyle(color: Colors.grey, fontSize: 14),
+                style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
               Text(
                 "\$${service.price.toStringAsFixed(2)}",
-                style:  TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: Colors.white, fontSize: 14),
               ),
             ],
           ),

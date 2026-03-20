@@ -258,7 +258,7 @@ class _RegisterState extends State<Register> {
               ),
               SizedBox(height: 15),
               Visibility(
-                visible: selectedRole != "Patient", 
+                visible: selectedRole != "Patient",
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12.0,
@@ -271,11 +271,8 @@ class _RegisterState extends State<Register> {
                     decoration: InputDecoration(
                       hintText: "Enter Authorization Code...",
                       labelText: "Security Code",
-                      labelStyle:  TextStyle(color: Colors.grey),
-                      prefixIcon:  Icon(
-                        Icons.verified_user,
-                        color: Colors.grey,
-                      ),
+                      labelStyle: TextStyle(color: Colors.grey),
+                      prefixIcon: Icon(Icons.verified_user, color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20.0),
                       ),
@@ -306,77 +303,86 @@ class _RegisterState extends State<Register> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                   onPressed: () async {
-  String name = nameController.text.trim();
-  String age = ageController.text.trim();
-  String email = emailController.text.trim();
-  String pass = passwordController.text.trim();
-  String confirmpass = ConfirmPasswordController.text.trim();
-  String enteredCode = accessCodeController.text.trim();
+                    onPressed: () async {
+                      String name = nameController.text.trim();
+                      String age = ageController.text.trim();
+                      String email = emailController.text.trim();
+                      String pass = passwordController.text.trim();
+                      String confirmpass = ConfirmPasswordController.text
+                          .trim();
+                      String enteredCode = accessCodeController.text.trim();
 
-  if (name.isEmpty || email.isEmpty || pass.isEmpty || age.isEmpty) {
-    showError("Please fill in all fields!");
-    return;
-  }
-  if (selectedRole != "Patient") {
-    String requiredCode = (selectedRole == "Doctor")
-        ? doctorSecret
-        : receptionistSecret;
-    if (enteredCode != requiredCode) {
-      showError("Unauthorized! Invalid code for $selectedRole registration.");
-      return;
-    }
-  }
+                      if (name.isEmpty ||
+                          email.isEmpty ||
+                          pass.isEmpty ||
+                          age.isEmpty) {
+                        showError("Please fill in all fields!");
+                        return;
+                      }
+                      if (selectedRole != "Patient") {
+                        String requiredCode = (selectedRole == "Doctor")
+                            ? doctorSecret
+                            : receptionistSecret;
+                        if (enteredCode != requiredCode) {
+                          showError(
+                            "Unauthorized! Invalid code for $selectedRole registration.",
+                          );
+                          return;
+                        }
+                      }
 
-  if (!email.contains('@')) {
-    showError("Please enter a valid email address!");
-    return;
-  }
-  if (pass.length < 6) {
-    showError("Password must be at least 6 characters!");
-    return;
-  }
-  if (pass != confirmpass) {
-    showError("Passwords do not match!");
-    return;
-  }
+                      if (!email.contains('@')) {
+                        showError("Please enter a valid email address!");
+                        return;
+                      }
+                      if (pass.length < 6) {
+                        showError("Password must be at least 6 characters!");
+                        return;
+                      }
+                      if (pass != confirmpass) {
+                        showError("Passwords do not match!");
+                        return;
+                      }
 
-  
-  showLoading(context); 
+                      showLoading(context);
 
-  try {
-    String generatedOtp = (Random().nextInt(900000) + 100000).toString();
+                      try {
+                        String generatedOtp =
+                            (Random().nextInt(900000) + 100000).toString();
 
-    AuthService authService = AuthService();
-    bool isSent = await authService.sendOTP(
-      email: email,
-      otpCode: generatedOtp,
-    );
+                        AuthService authService = AuthService();
+                        bool isSent = await authService.sendOTP(
+                          email: email,
+                          otpCode: generatedOtp,
+                        );
 
-    if (context.mounted) Navigator.pop(context); 
+                        if (context.mounted) Navigator.pop(context);
 
-    if (isSent) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => OTPScreen(
-            email: email,
-            password: pass,
-            name: name,
-            age: age,
-            role: selectedRole,
-            correctOTP: generatedOtp,
-          ),
-        ),
-      );
-    } else {
-      showError("Failed to send verification email. Please try again.");
-    }
-
-  } catch (e) {
-    if (context.mounted) Navigator.pop(context);
-    showError("An unexpected error occurred. Please try again.");
-  }
-},
+                        if (isSent) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => OTPScreen(
+                                email: email,
+                                password: pass,
+                                name: name,
+                                age: age,
+                                role: selectedRole,
+                                correctOTP: generatedOtp,
+                              ),
+                            ),
+                          );
+                        } else {
+                          showError(
+                            "Failed to send verification email. Please try again.",
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) Navigator.pop(context);
+                        showError(
+                          "An unexpected error occurred. Please try again.",
+                        );
+                      }
+                    },
 
                     child: Text(
                       "Signup ",
@@ -432,95 +438,149 @@ class _RegisterState extends State<Register> {
                               ),
                             ),
                           ),
-                  onPressed: () async {
+                          onPressed: () async {
+                            if (selectedRole != "Patient") {
+                              String enteredKey = "";
+                              String requiredCode = (selectedRole == "Doctor")
+                                  ? doctorSecret
+                                  : receptionistSecret;
 
-  if (selectedRole != "Patient") {
-    String enteredKey = "";
-    String requiredCode = (selectedRole == "Doctor") ? doctorSecret : receptionistSecret;
+                              bool isAuthorized =
+                                  await showDialog<bool>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: cardColor,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      title: Text(
+                                        "Security Verification",
+                                        style: TextStyle(color: primaryBlue),
+                                      ),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            "Enter the secret key for $selectedRole",
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 15),
+                                          TextField(
+                                            obscureText: true,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                            decoration: InputDecoration(
+                                              hintText: "Secret Key",
+                                              hintStyle: const TextStyle(
+                                                color: Colors.grey,
+                                              ),
+                                              enabledBorder:
+                                                  UnderlineInputBorder(
+                                                    borderSide: BorderSide(
+                                                      color: primaryBlue,
+                                                    ),
+                                                  ),
+                                            ),
+                                            onChanged: (value) =>
+                                                enteredKey = value.trim(),
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: primaryBlue,
+                                          ),
+                                          child: const Text(
+                                            "Verify",
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            if (enteredKey == requiredCode) {
+                                              Navigator.pop(context, true);
+                                            } else {
+                                              showError("Wrong Secret Key!");
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ) ??
+                                  false;
 
-    bool isAuthorized = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("Security Verification", style: TextStyle(color: primaryBlue)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Enter the secret key for $selectedRole", style: TextStyle(color: Colors.white70)),
-            const SizedBox(height: 15),
-            TextField(
-              obscureText: true,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "Secret Key",
-                hintStyle: const TextStyle(color: Colors.grey),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
-              ),
-              onChanged: (value) => enteredKey = value.trim(),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-            onPressed: () => Navigator.pop(context, false),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
-            child: const Text("Verify", style: TextStyle(color: Colors.black)),
-            onPressed: () {
-              if (enteredKey == requiredCode) {
-                Navigator.pop(context, true);
-              } else {
-                showError("Wrong Secret Key!");
-              }
-            },
-          ),
-        ],
-      ),
-    ) ?? false;
+                              if (!isAuthorized) return;
+                            }
 
-    if (!isAuthorized) return;
-  }
+                            showLoading(context);
+                            try {
+                              AuthService authService = AuthService();
+                              User? user = await authService.signUpWithGoogle(
+                                showError,
+                              );
 
-  showLoading(context);
-  try {
-    AuthService authService = AuthService();
-    User? user = await authService.signUpWithGoogle(showError);
+                              if (user != null) {
+                                await DatabaseService().saveUserData(
+                                  uid: user.uid,
+                                  name: nameController.text.trim().isEmpty
+                                      ? (user.displayName ?? "User")
+                                      : nameController.text.trim(),
+                                  age: " ",
+                                  email: user.email ?? "",
+                                  role: selectedRole,
+                                );
 
-    if (user != null) {
-  
-      await DatabaseService().saveUserData(
-        uid: user.uid,
-        name: nameController.text.trim().isEmpty ? (user.displayName ?? "User") : nameController.text.trim(),
-        age: " ",
-        email: user.email ?? "",
-        role: selectedRole,
-      );
+                                if (context.mounted) {
+                                  Navigator.pop(context);
 
-      if (context.mounted) {
-        Navigator.pop(context); 
-
-        if (selectedRole == 'Doctor') {
-         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>DoctorDashboard()));
-        } else if (selectedRole == 'Receptionist') {
-         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>ReceptionistDashboard()));
-        } else {
-         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context)=>PatientHome()));
-        }
-      }
-    } else {
-      if (context.mounted) Navigator.pop(context);
-      showError("Google Sign-In was cancelled or failed.");
-    }
-  } catch (e) {
-    if (context.mounted) Navigator.pop(context);
-    print("Error during Google Sign-In: $e"); 
-    showError("Error: ${e.toString()}"); 
-  }
-},
+                                  if (selectedRole == 'Doctor') {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => DoctorDashboard(),
+                                      ),
+                                    );
+                                  } else if (selectedRole == 'Receptionist') {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReceptionistDashboard(),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => PatientHome(),
+                                      ),
+                                    );
+                                  }
+                                }
+                              } else {
+                                if (context.mounted) Navigator.pop(context);
+                                showError(
+                                  "Google Sign-In was cancelled or failed.",
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) Navigator.pop(context);
+                              print("Error during Google Sign-In: $e");
+                              showError("Error: ${e.toString()}");
+                            }
+                          },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

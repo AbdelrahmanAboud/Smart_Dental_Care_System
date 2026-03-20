@@ -7,7 +7,6 @@ import 'package:smart_dental_care_system/pages/doctor/DoctorChatList.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Analytics.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Emergency_Alerts.dart';
-import 'package:smart_dental_care_system/Globale.Data.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
 
 final Color bgColor = const Color(0xFF0B1C2D);
@@ -34,69 +33,75 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
     _emergencyStream = FirebaseFirestore.instance
         .collection('emergencies')
         .where('status', isEqualTo: 'waiting')
-
         .snapshots();
-
   }
 
   fetchData() async {
     setState(() => isLoading = true);
     User? currentUser = FirebaseAuth.instance.currentUser;
+
     if (currentUser != null) {
       var userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .get();
       userData = userDoc.data();
+
+      DateTime now = DateTime.now();
+      DateTime start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+      DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      var snapshot = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('doctorId', isEqualTo: currentUser.uid)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .get();
+
+      setState(() {
+        allTodayAppointments = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+          return PatientAppointment(
+            uid: data['patientId'] ?? '',
+            name: data['patientName'] ?? 'Unknown',
+            status: data['status'] ?? "waiting",
+            treatment: (data['type'] ?? data['treatment'] ?? 'General Checkup')
+                .toString(),
+            time: data['slot'] ?? '',
+            riskScore: (data['riskScore'] ?? 0).toInt(),
+          );
+        }).toList();
+
+        allTodayAppointments.sort((a, b) => a.time.compareTo(b.time));
+
+        filteredAppointments = allTodayAppointments;
+
+        gridItems[0]["value"] = allTodayAppointments.length.toString();
+
+        gridItems[1]["value"] = allTodayAppointments
+            .where((a) => a.status.toLowerCase() == "completed")
+            .length
+            .toString();
+
+        gridItems[2]["value"] = allTodayAppointments
+            .where((a) => a.status.toLowerCase() == "waiting")
+            .length
+            .toString();
+
+        if (allTodayAppointments.isNotEmpty) {
+          int completed = int.parse(gridItems[1]["value"]);
+          double adherence = (completed / allTodayAppointments.length) * 100;
+          gridItems[3]["value"] = "${adherence.toStringAsFixed(0)}%";
+        } else {
+          gridItems[3]["value"] = "0%";
+        }
+
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
     }
-
-    DateTime now = DateTime.now();
-    DateTime start = DateTime(now.year, now.month, now.day, 0, 0, 0);
-    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    var snapshot = await FirebaseFirestore.instance
-        .collection('appointments')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
-        .get();
-
-    setState(() {
-      allTodayAppointments = snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        return PatientAppointment(
-          uid: data['patientId'] ?? '',
-          name: data['patientName'] ?? 'Unknown',
-          status: data['status'] ?? "waiting",
-          treatment: data['treatment'] ?? '',
-          time: data['slot'] ?? '',
-          riskScore: (data['riskScore'] ?? 0).toInt(),
-        );
-      }).toList();
-
-      filteredAppointments = allTodayAppointments;
-
-      gridItems[0]["value"] = allTodayAppointments.length.toString();
-
-      gridItems[1]["value"] = allTodayAppointments
-          .where((a) => a.status == "Completed")
-          .length
-          .toString();
-
-      gridItems[2]["value"] = allTodayAppointments
-          .where((a) => a.status == "waiting")
-          .length
-          .toString();
-
-      if (allTodayAppointments.isNotEmpty) {
-        double adherence =
-            (int.parse(gridItems[1]["value"]) / allTodayAppointments.length) *
-            100;
-        gridItems[3]["value"] = "${adherence.toStringAsFixed(0)}%";
-      } else {
-        gridItems[3]["value"] = "0%";
-      }
-      isLoading = false;
-    });
   }
 
   bool isSearching = false;
@@ -150,22 +155,22 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             case 0:
               break;
             case 1:
-              Navigator.pushReplacement(
+              Navigator.of(
                 context,
-                MaterialPageRoute(builder: (context) => Analytics()),
-              );
+              ).push(MaterialPageRoute(builder: (context) => Analytics()));
+
               break;
             case 2:
-              Navigator.pushReplacement(
-                context,
+              Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => DoctorAvailableSlots()),
               );
+
               break;
             case 3:
-              Navigator.pushReplacement(
+              Navigator.of(
                 context,
-                MaterialPageRoute(builder: (context) => DoctorChatList()),
-              );
+              ).push(MaterialPageRoute(builder: (context) => DoctorChatList()));
+
               break;
           }
         },
@@ -326,21 +331,25 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               StreamBuilder<QuerySnapshot>(
                 stream: _emergencyStream,
                 builder: (context, snapshot) {
-                  // 1. التحقق من وجود خطأ (مثل عدم وجود Index في Firestore)
                   if (snapshot.hasError) {
-                    return Center(child: Text("Error: ${snapshot.error}", style: TextStyle(color: Colors.white)));
+                    return Center(
+                      child: Text(
+                        "Error: ${snapshot.error}",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
                   }
 
-                  // 2. التحقق من حالة التحميل
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return SizedBox.shrink(); // أو مؤشر تحميل صغير
+                    return SizedBox.shrink();
                   }
 
                   int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
 
                   if (count == 0) return SizedBox.shrink();
 
-                  var lastEmergency = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+                  var lastEmergency =
+                      snapshot.data!.docs.first.data() as Map<String, dynamic>;
 
                   return Container(
                     margin: EdgeInsets.symmetric(vertical: 20),
@@ -487,7 +496,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                       patient.name,
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 16,
+                                        fontSize: 17,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -497,7 +506,9 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: patient.status == "In Progress"
+                                        color:
+                                            patient.status.toLowerCase() ==
+                                                "completed"
                                             ? Colors.cyan.withOpacity(0.1)
                                             : Colors.orange.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
@@ -505,7 +516,9 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                       child: Text(
                                         patient.status,
                                         style: TextStyle(
-                                          color: patient.status == "In Progress"
+                                          color:
+                                              patient.status.toLowerCase() ==
+                                                  "completed"
                                               ? Colors.cyanAccent
                                               : Colors.orangeAccent,
                                           fontSize: 11,
@@ -514,14 +527,30 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  patient.treatment,
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 13,
-                                  ),
+
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.healing_outlined,
+                                      size: 14,
+                                      color: primaryBlue,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      patient.treatment,
+                                      style: TextStyle(
+                                        color: primaryBlue.withOpacity(0.8),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 12),
+
+                                SizedBox(height: 15),
+
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -543,39 +572,29 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
                                         ),
                                       ],
                                     ),
-                                    StreamBuilder<DocumentSnapshot>(
-                                      stream: FirebaseFirestore.instance
-                                          .collection('users')
-                                          .doc(patient.uid)
-                                          .snapshots(),
-                                      builder: (context, snapshot) {
-                                        if (!snapshot.hasData) {
-                                          return Text(
-                                            "Loading...",
-                                            style: TextStyle(color: Colors.white38, fontSize: 13),
-                                          );
-                                        }
 
-                                        var userData = snapshot.data!.data() as Map<String, dynamic>?;
-
-                                        // ملاحظة: الصورة توضح أن المسار هو oralScore ثم score
-                                        int liveRiskScore = 0;
-                                        if (userData != null && userData['oralScore'] != null) {
-                                          liveRiskScore = (userData['oralScore']['score'] ?? 0).toInt();
-                                        }
-
-                                        return Text(
-                                          "Risk Score: $liveRiskScore",
-                                          style: TextStyle(
-                                            color: liveRiskScore < 80
-                                                ? Colors.redAccent
-                                                : Colors.greenAccent,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        );
-                                      },
-                                    )
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: patient.riskScore < 60
+                                            ? Colors.red.withOpacity(0.1)
+                                            : Colors.green.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        "Risk: ${patient.riskScore}",
+                                        style: TextStyle(
+                                          color: patient.riskScore < 60
+                                              ? Colors.redAccent
+                                              : Colors.greenAccent,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],

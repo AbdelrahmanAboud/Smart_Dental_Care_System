@@ -32,7 +32,7 @@ class _PatientRrecordState extends State<PatientRecord> {
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
         leading: IconButton(
-          icon:  Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () {
             Navigator.of(context).pop();
           },

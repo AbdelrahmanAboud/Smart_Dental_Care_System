@@ -16,10 +16,9 @@ class Bookingpage extends StatefulWidget {
 }
 
 class _BookingpageState extends State<Bookingpage> {
-  List<String> treatments = ['Consultation', 'Cleaning', 'Filling', 'Extraction', 'Root Canal'];
-  String selectedTreatment = 'Consultation';
+  List<String> treatments = ['Cleaning', 'Filling', 'Extraction', 'Root Canal'];
+  String selectedTreatment = 'Filling';
 
-  // متغيرات لاختيار الدكتور
   List<Map<String, dynamic>> doctors = [];
   String? selectedDoctorId;
   String? selectedDoctorName;
@@ -34,10 +33,9 @@ class _BookingpageState extends State<Bookingpage> {
   @override
   void initState() {
     super.initState();
-    _fetchDoctors(); // جلب الدكاترة عند البداية
+    _fetchDoctors();
   }
 
-  // دالة جلب الدكاترة من الفايربيز
   Future<void> _fetchDoctors() async {
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -46,10 +44,11 @@ class _BookingpageState extends State<Bookingpage> {
           .get();
 
       setState(() {
-        doctors = snapshot.docs.map((doc) => {
-          'id': doc.id,
-          'name': doc['name'] ?? 'Unknown Doctor',
-        }).toList();
+        doctors = snapshot.docs
+            .map(
+              (doc) => {'id': doc.id, 'name': doc['name'] ?? 'Unknown Doctor'},
+            )
+            .toList();
 
         if (doctors.isNotEmpty) {
           selectedDoctorId = doctors[0]['id'];
@@ -64,6 +63,8 @@ class _BookingpageState extends State<Bookingpage> {
   }
 
   Future<void> _fetchSlotsFromFirebase(DateTime date) async {
+    if (selectedDoctorId == null) return;
+
     setState(() {
       isLoadingSlots = true;
       todaySlots = [];
@@ -71,11 +72,12 @@ class _BookingpageState extends State<Bookingpage> {
     });
 
     String dateKey = DateFormat('yyyy-MM-dd').format(date);
+    String docId = "${selectedDoctorId}_$dateKey";
 
     try {
       DocumentSnapshot slotDoc = await FirebaseFirestore.instance
           .collection('available_slots')
-          .doc(dateKey)
+          .doc(docId)
           .get();
 
       if (slotDoc.exists && slotDoc.data() != null) {
@@ -114,10 +116,13 @@ class _BookingpageState extends State<Bookingpage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // اختيار الدكتور أولاً
               Text(
                 "Select Doctor:",
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               SizedBox(height: 8),
               Container(
@@ -128,26 +133,35 @@ class _BookingpageState extends State<Bookingpage> {
                   border: Border.all(color: primaryBlue.withOpacity(0.5)),
                 ),
                 child: isLoadingDoctors
-                    ? LinearProgressIndicator(color: primaryBlue, backgroundColor: cardColor)
+                    ? LinearProgressIndicator(
+                        color: primaryBlue,
+                        backgroundColor: cardColor,
+                      )
                     : DropdownButton<String>(
-                  value: selectedDoctorId,
-                  dropdownColor: cardColor,
-                  isExpanded: true,
-                  underline: SizedBox(),
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                  items: doctors.map((doc) {
-                    return DropdownMenuItem<String>(
-                      value: doc['id'],
-                      child: Text(doc['name']),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      selectedDoctorId = newValue;
-                      selectedDoctorName = doctors.firstWhere((d) => d['id'] == newValue)['name'];
-                    });
-                  },
-                ),
+                        value: selectedDoctorId,
+                        dropdownColor: cardColor,
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        items: doctors.map((doc) {
+                          return DropdownMenuItem<String>(
+                            value: doc['id'],
+                            child: Text(doc['name']),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            selectedDoctorId = newValue;
+                            selectedDoctorName = doctors.firstWhere(
+                              (d) => d['id'] == newValue,
+                            )['name'];
+
+                            if (selectedDay != null) {
+                              _fetchSlotsFromFirebase(selectedDay!);
+                            }
+                          });
+                        },
+                      ),
               ),
               SizedBox(height: 24),
               Row(
@@ -162,14 +176,21 @@ class _BookingpageState extends State<Bookingpage> {
                       icon: Icon(Icons.chevron_left, color: primaryBlue),
                       onPressed: () {
                         setState(() {
-                          focusedDay = DateTime(focusedDay.year, focusedDay.month - 1);
+                          focusedDay = DateTime(
+                            focusedDay.year,
+                            focusedDay.month - 1,
+                          );
                         });
                       },
                     ),
                   ),
                   Text(
                     DateFormat('MMMM yyyy').format(focusedDay),
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -180,7 +201,10 @@ class _BookingpageState extends State<Bookingpage> {
                       icon: Icon(Icons.chevron_right, color: primaryBlue),
                       onPressed: () {
                         setState(() {
-                          focusedDay = DateTime(focusedDay.year, focusedDay.month + 1);
+                          focusedDay = DateTime(
+                            focusedDay.year,
+                            focusedDay.month + 1,
+                          );
                         });
                       },
                     ),
@@ -241,7 +265,11 @@ class _BookingpageState extends State<Bookingpage> {
               SizedBox(height: 16),
               Text(
                 "Select Treatment Type:",
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               SizedBox(height: 8),
               Container(
@@ -258,16 +286,27 @@ class _BookingpageState extends State<Bookingpage> {
                   underline: SizedBox(),
                   style: TextStyle(color: Colors.white, fontSize: 16),
                   items: treatments.map((String value) {
-                    return DropdownMenuItem<String>(value: value, child: Text(value));
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
                   }).toList(),
-                  onChanged: (newValue) => setState(() => selectedTreatment = newValue!),
+                  onChanged: (newValue) {
+                    setState(() {
+                      selectedTreatment = newValue!;
+                    });
+                  },
                 ),
               ),
               SizedBox(height: 16),
               if (selectedDay != null) ...[
                 Text(
                   "Available Time Slots:",
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 8),
                 if (isLoadingSlots)
@@ -276,7 +315,10 @@ class _BookingpageState extends State<Bookingpage> {
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
-                      child: Text("No slots available", style: TextStyle(color: Colors.grey, fontSize: 14)),
+                      child: Text(
+                        "No slots available",
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
                     ),
                   )
                 else
@@ -289,12 +331,18 @@ class _BookingpageState extends State<Bookingpage> {
                         return GestureDetector(
                           onTap: () => setState(() => selectedSlot = slot),
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                            padding: EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 14,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected ? primaryBlue : cardColor,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(slot, style: TextStyle(color: Colors.white)),
+                            child: Text(
+                              slot,
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -311,52 +359,69 @@ class _BookingpageState extends State<Bookingpage> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () async {
-              if (selectedSlot != null && selectedDay != null && selectedDoctorId != null) {
+              if (selectedSlot != null &&
+                  selectedDay != null &&
+                  selectedDoctorId != null) {
                 try {
                   String uid = FirebaseAuth.instance.currentUser!.uid;
-                  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-                  Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+                  DocumentSnapshot userDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .get();
+                  Map<String, dynamic> data =
+                      userDoc.data() as Map<String, dynamic>;
                   String patientName = data['name'] ?? "Unknown Patient";
 
-                  // جلب الـ score من الهيكل oralScore -> score كما بالصور السابقة
                   var riskScore = 0;
-                  if (data['oralScore'] != null && data['oralScore']['score'] != null) {
+                  if (data['oralScore'] != null &&
+                      data['oralScore']['score'] != null) {
                     riskScore = data['oralScore']['score'];
                   }
 
-                  // حفظ الموعد في الفايربيز مع ايدي الدكتور واسمه
-                  await FirebaseFirestore.instance.collection('appointments').add({
-                    'patientId': uid,
-                    'patientName': patientName,
-                    'doctorId': selectedDoctorId, // الدكتور المختار
-                    'doctorName': selectedDoctorName,
-                    'riskScore': riskScore,
-                    'date': selectedDay,
-                    'slot': selectedSlot,
-                    'type': selectedTreatment, // حفظها كـ type عشان الـ Analytics
-                    'createdAt': FieldValue.serverTimestamp(),
-                    'status': 'Pending',
-                  });
+                  await FirebaseFirestore.instance
+                      .collection('appointments')
+                      .add({
+                        'patientId': uid,
+                        'patientName': patientName,
+                        'doctorId': selectedDoctorId,
+                        'doctorName': selectedDoctorName,
+                        'riskScore': riskScore,
+                        'date': selectedDay,
+                        'slot': selectedSlot,
+                        'type': selectedTreatment,
+                        'createdAt': FieldValue.serverTimestamp(),
+                        'status': 'Pending',
+                      });
 
-                  // تحديث assignedDoctorId للمريض لكي يظهر في الـ Analytics الخاص بالدكتور
-                  await FirebaseFirestore.instance.collection('users').doc(uid).update({
-                    'assignedDoctorId': selectedDoctorId,
-                  });
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .update({'assignedDoctorId': selectedDoctorId});
 
                   showBookingDialog(context, selectedSlot!, selectedDay!);
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a doctor and a time slot")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Please select a doctor and a time slot"),
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
               elevation: selectedSlot != null ? 8 : 0,
               shadowColor: primaryBlue.withOpacity(0.4),
-              backgroundColor: selectedSlot != null ? primaryBlue : const Color(0xFF162A3D),
+              backgroundColor: selectedSlot != null
+                  ? primaryBlue
+                  : const Color(0xFF162A3D),
               padding: EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
             ),
             child: Text(
               "Confirm Booking",
@@ -390,7 +455,10 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
           ),
           child: Container(
             padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-            decoration: BoxDecoration(color: primaryDark, borderRadius: BorderRadius.circular(28)),
+            decoration: BoxDecoration(
+              color: primaryDark,
+              borderRadius: BorderRadius.circular(28),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -400,15 +468,33 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                     color: accentCyan.withOpacity(0.1),
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: accentCyan.withOpacity(0.3), blurRadius: 20, spreadRadius: 5),
+                      BoxShadow(
+                        color: accentCyan.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
                     ],
                   ),
                   child: Icon(Icons.stars_rounded, size: 60, color: accentCyan),
                 ),
                 SizedBox(height: 25),
-                Text("AWESOME!", style: TextStyle(fontSize: 26, letterSpacing: 2, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(
+                  "AWESOME!",
+                  style: TextStyle(
+                    fontSize: 26,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
                 SizedBox(height: 10),
-                Text("Your spot is secured", style: TextStyle(fontSize: 16, color: Color.fromARGB(255, 106, 188, 208).withOpacity(0.8))),
+                Text(
+                  "Your spot is secured",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color.fromARGB(255, 106, 188, 208).withOpacity(0.8),
+                  ),
+                ),
                 SizedBox(height: 25),
                 Container(
                   width: double.infinity,
@@ -420,9 +506,22 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                   ),
                   child: Column(
                     children: [
-                      Text(slot, style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        slot,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 5),
-                      Text(DateFormat('EEEE, dd MMM yyyy').format(date), style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                      Text(
+                        DateFormat('EEEE, dd MMM yyyy').format(date),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -436,12 +535,28 @@ void showBookingDialog(BuildContext context, String slot, DateTime date) {
                     width: double.infinity,
                     height: 55,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [accentCyan, Color(0xFF0099FF)]),
+                      gradient: const LinearGradient(
+                        colors: [accentCyan, Color(0xFF0099FF)],
+                      ),
                       borderRadius: BorderRadius.circular(15),
-                      boxShadow: [BoxShadow(color: accentCyan.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentCyan.withOpacity(0.4),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Center(
-                      child: Text("GREAT", style: TextStyle(color: primaryDark, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      child: Text(
+                        "GREAT",
+                        style: TextStyle(
+                          color: primaryDark,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
                   ),
                 ),

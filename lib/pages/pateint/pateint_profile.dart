@@ -101,8 +101,14 @@ class _PateintProfileState extends State<PateintProfile> {
         dataToEncode['createdAt'] is Timestamp) {
       dataToEncode['createdAt'] = dataToEncode['createdAt'].toDate().toString();
     }
+    String uid = FirebaseAuth.instance.currentUser!.uid;
 
-    String qrData = userData?["id"] ?? "no-data";
+    Map<String, dynamic> qrData = {
+      "uid": uid,
+      "name": userData?['name'] ?? "Unknown",
+      "status": userData?['status'] ?? "Done",
+    };
+    String qrDataString = jsonEncode(qrData);
     String imageUrl = userData?['profileImage'] ?? "";
 
     return Scaffold(
@@ -115,8 +121,8 @@ class _PateintProfileState extends State<PateintProfile> {
               child: Stack(
                 children: [
                   Container(
-                    padding:  EdgeInsets.all(4),
-                    decoration:  BoxDecoration(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
                       color: cardColor,
                       shape: BoxShape.circle,
                     ),
@@ -124,7 +130,7 @@ class _PateintProfileState extends State<PateintProfile> {
                         ? CircleAvatar(
                             radius: 65,
                             backgroundColor: cardColor,
-                            backgroundImage:  AssetImage(
+                            backgroundImage: const AssetImage(
                               "lib/assets/user_logo.png",
                             ),
                           )
@@ -133,25 +139,24 @@ class _PateintProfileState extends State<PateintProfile> {
                             imageBuilder: (context, imageProvider) =>
                                 CircleAvatar(
                                   radius: 65,
-                                  backgroundColor:cardColor ,
+                                  backgroundColor: cardColor,
                                   backgroundImage: imageProvider,
                                 ),
-
                             placeholder: (context, url) => CircleAvatar(
                               radius: 65,
+                              backgroundColor: cardColor,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                backgroundColor: cardColor,
+                                color: primaryBlue,
                               ),
                             ),
-                            errorWidget: (context, url, error) =>
-                                const CircleAvatar(
-                                  backgroundColor: Color(0xFFF5F5F5),
-                                  radius: 65,
-                                  backgroundImage: AssetImage(
-                                    'assets/default_user.png',
-                                  ),
-                                ),
+                            errorWidget: (context, url, error) => CircleAvatar(
+                              radius: 65,
+                              backgroundColor: cardColor,
+                              backgroundImage: const AssetImage(
+                                'lib/assets/user_logo.png',
+                              ),
+                            ),
                           ),
                   ),
                   Positioned(
@@ -168,7 +173,7 @@ class _PateintProfileState extends State<PateintProfile> {
                           shape: BoxShape.circle,
                           border: Border.all(color: cardColor, width: 2),
                         ),
-                        child:  Icon(
+                        child: Icon(
                           Icons.camera_alt,
                           color: Colors.white,
                           size: 20,
@@ -228,8 +233,7 @@ class _PateintProfileState extends State<PateintProfile> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    SizedBox(height: 25),
+                    const SizedBox(height: 25),
 
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -254,8 +258,8 @@ class _PateintProfileState extends State<PateintProfile> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 18),
 
-                    SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -276,8 +280,7 @@ class _PateintProfileState extends State<PateintProfile> {
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 18),
+                    const SizedBox(height: 18),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -291,7 +294,7 @@ class _PateintProfileState extends State<PateintProfile> {
                         ),
                         Text(
                           userData?["bloodType"] ?? "-",
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -299,8 +302,7 @@ class _PateintProfileState extends State<PateintProfile> {
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 18),
+                    const SizedBox(height: 18),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -313,17 +315,25 @@ class _PateintProfileState extends State<PateintProfile> {
                           ),
                         ),
                         Text(
-                          userData?["phone"] ?? "-",
-                          style: const TextStyle(
-                            color: Colors.white,
+                          (userData?["phone"] != null &&
+                                  userData?["phone"].toString().length == 11)
+                              ? userData!["phone"]
+                              : (userData?["phone"] == null
+                                    ? "-"
+                                    : "Invalid Number"),
+                          style: TextStyle(
+                            color:
+                                (userData?["phone"] != null &&
+                                    userData?["phone"].toString().length == 11)
+                                ? Colors.white
+                                : Colors.redAccent.withOpacity(0.8),
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 18),
+                    const SizedBox(height: 18),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -346,15 +356,16 @@ class _PateintProfileState extends State<PateintProfile> {
                       ],
                     ),
 
-                    SizedBox(height: 25),
+                    const SizedBox(height: 25),
+
                     Padding(
-                      padding: EdgeInsets.only(left: 16.0, right: 16.0),
-                      child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: SizedBox(
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF00D2FF),
+                            backgroundColor: const Color(0xFF00D2FF),
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -382,263 +393,329 @@ class _PateintProfileState extends State<PateintProfile> {
                                       text: userData?["dob"],
                                     );
 
-                                return AlertDialog(
-                                  backgroundColor: const Color(0xFF102136),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  title: Column(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFF00E5FF,
-                                          ).withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.edit_note_rounded,
-                                          color: Color(0xFF00E5FF),
-                                          size: 30,
-                                        ),
+                                return StatefulBuilder(
+                                  builder: (context, setDialogState) {
+                                    return AlertDialog(
+                                      backgroundColor: const Color(0xFF102136),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
                                       ),
-                                      const SizedBox(height: 10),
-                                      const Text(
-                                        "Update Profile",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 22,
-                                        ),
+                                      title: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF00E5FF,
+                                              ).withOpacity(0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.edit_note_rounded,
+                                              color: Color(0xFF00E5FF),
+                                              size: 30,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const Text(
+                                            "Update Profile",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 22,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  content: SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(height: 15),
-                                        TextField(
-                                          controller: ageController,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                          decoration: InputDecoration(
-                                            prefixIcon: Icon(
-                                              Icons.calendar_today,
-                                              color: primaryBlue,
-                                              size: 20,
-                                            ),
-                                            labelText: "Age",
-                                            labelStyle: TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                            filled: true,
-                                            fillColor: Color(0xFF06101E),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: BorderSide(
-                                                color: Colors.white10,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: BorderSide(
-                                                color: primaryBlue,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(height: 15),
-                                        TextField(
-                                          controller: bloodController,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                          decoration: InputDecoration(
-                                            prefixIcon: Icon(
-                                              Icons.bloodtype,
-                                              color: primaryBlue,
-                                              size: 20,
-                                            ),
-                                            labelText: "Blood Type",
-                                            labelStyle: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                            filled: true,
-                                            fillColor: const Color(0xFF06101E),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: const BorderSide(
-                                                color: Colors.white10,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: BorderSide(
-                                                color: primaryBlue,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 15),
-                                        TextField(
-                                          controller: phoneController,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                          decoration: InputDecoration(
-                                            prefixIcon: Icon(
-                                              Icons.phone,
-                                              color: primaryBlue,
-                                              size: 20,
-                                            ),
-                                            labelText: "Phone",
-                                            labelStyle: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                            filled: true,
-                                            fillColor: const Color(0xFF06101E),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: const BorderSide(
-                                                color: Colors.white10,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: BorderSide(
-                                                color: primaryBlue,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 15),
-                                        TextField(
-                                          controller: dobController,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                          decoration: InputDecoration(
-                                            prefixIcon: Icon(
-                                              Icons.event,
-                                              color: primaryBlue,
-                                              size: 20,
-                                            ),
-                                            labelText: "Date of Birth",
-                                            labelStyle: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                            filled: true,
-                                            fillColor: const Color(0xFF06101E),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: const BorderSide(
-                                                color: Colors.white10,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              borderSide: BorderSide(
-                                                color: primaryBlue,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  actionsPadding: const EdgeInsets.fromLTRB(
-                                    15,
-                                    0,
-                                    15,
-                                    20,
-                                  ),
-                                  actions: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextButton(
-                                            child: const Text(
-                                              "Cancel",
-                                              style: TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: primaryBlue,
+                                      content: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const SizedBox(height: 15),
 
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
+                                            TextField(
+                                              controller: dobController,
+                                              readOnly: true,
+                                              style: const TextStyle(
+                                                color: Colors.white,
                                               ),
-                                            ),
-                                            child: const Text(
-                                              "Save",
-                                              style: TextStyle(
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            onPressed: () async {
-                                              showDialog(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (context) => Center(
-                                                  child:
-                                                      CircularProgressIndicator(
+                                              onTap: () async {
+                                                DateTime?
+                                                pickedDate = await showDatePicker(
+                                                  context: context,
+                                                  initialDate: DateTime(2000),
+                                                  firstDate: DateTime(1900),
+                                                  lastDate: DateTime.now(),
+                                                  builder: (context, child) {
+                                                    return Theme(
+                                                      data: Theme.of(context).copyWith(
+                                                        colorScheme:
+                                                            ColorScheme.dark(
+                                                              primary:
+                                                                  primaryBlue,
+                                                              onPrimary:
+                                                                  Colors.black,
+                                                              surface:
+                                                                  const Color(
+                                                                    0xFF102136,
+                                                                  ),
+                                                              onSurface:
+                                                                  Colors.white,
+                                                            ),
+                                                        textButtonTheme:
+                                                            TextButtonThemeData(
+                                                              style: TextButton.styleFrom(
+                                                                foregroundColor:
+                                                                    primaryBlue,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                      child: child!,
+                                                    );
+                                                  },
+                                                );
+                                                if (pickedDate != null) {
+                                                  String formattedDate =
+                                                      "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+
+                                                  DateTime today =
+                                                      DateTime.now();
+                                                  int age =
+                                                      today.year -
+                                                      pickedDate.year;
+                                                  if (today.month <
+                                                          pickedDate.month ||
+                                                      (today.month ==
+                                                              pickedDate
+                                                                  .month &&
+                                                          today.day <
+                                                              pickedDate.day)) {
+                                                    age--;
+                                                  }
+
+                                                  setDialogState(() {
+                                                    dobController.text =
+                                                        formattedDate;
+                                                    ageController.text = age
+                                                        .toString();
+                                                  });
+                                                }
+                                              },
+                                              decoration: InputDecoration(
+                                                prefixIcon: Icon(
+                                                  Icons.event,
+                                                  color: primaryBlue,
+                                                  size: 20,
+                                                ),
+                                                labelText:
+                                                    "Select Date of Birth",
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                                filled: true,
+                                                fillColor: const Color(
+                                                  0xFF06101E,
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                            color:
+                                                                Colors.white10,
+                                                          ),
+                                                    ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide: BorderSide(
                                                         color: primaryBlue,
                                                       ),
+                                                    ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 15),
+                                            TextField(
+                                              controller: bloodController,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              decoration: InputDecoration(
+                                                prefixIcon: Icon(
+                                                  Icons.bloodtype,
+                                                  color: primaryBlue,
+                                                  size: 20,
                                                 ),
-                                              );
+                                                labelText: "Blood Type",
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                                filled: true,
+                                                fillColor: const Color(
+                                                  0xFF06101E,
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                            color:
+                                                                Colors.white10,
+                                                          ),
+                                                    ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide: BorderSide(
+                                                        color: primaryBlue,
+                                                      ),
+                                                    ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 15),
+                                            TextField(
+                                              controller: phoneController,
+                                              keyboardType: TextInputType.phone,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              decoration: InputDecoration(
+                                                prefixIcon: Icon(
+                                                  Icons.phone,
+                                                  color: primaryBlue,
+                                                  size: 20,
+                                                ),
+                                                labelText: "Phone",
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                                filled: true,
+                                                fillColor: const Color(
+                                                  0xFF06101E,
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                            color:
+                                                                Colors.white10,
+                                                          ),
+                                                    ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide: BorderSide(
+                                                        color: primaryBlue,
+                                                      ),
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      actions: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextButton(
+                                                child: const Text(
+                                                  "Cancel",
+                                                  style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: primaryBlue,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  "Save",
+                                                  style: TextStyle(
+                                                    color: Colors.black,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                onPressed: () async {
+                                                  showDialog(
+                                                    context: context,
+                                                    barrierDismissible: false,
+                                                    builder: (context) => Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            color: primaryBlue,
+                                                          ),
+                                                    ),
+                                                  );
 
-                                              try {
-                                                String uid = FirebaseAuth
-                                                    .instance
-                                                    .currentUser!
-                                                    .uid;
-                                                await FirebaseFirestore.instance
-                                                    .collection('users')
-                                                    .doc(uid)
-                                                    .update({
-                                                      "age": ageController.text,
-                                                      "phone":
-                                                          phoneController.text,
-                                                      "bloodType":
-                                                          bloodController.text,
-                                                      "dob": dobController.text,
-                                                    });
+                                                  try {
+                                                    String uid = FirebaseAuth
+                                                        .instance
+                                                        .currentUser!
+                                                        .uid;
+                                                    await FirebaseFirestore
+                                                        .instance
+                                                        .collection('users')
+                                                        .doc(uid)
+                                                        .update({
+                                                          "age": ageController
+                                                              .text,
+                                                          "phone":
+                                                              phoneController
+                                                                  .text,
+                                                          "bloodType":
+                                                              bloodController
+                                                                  .text,
+                                                          "dob": dobController
+                                                              .text,
+                                                        });
 
-                                                Navigator.pop(context);
-                                                Navigator.pop(context);
-                                                fetchData();
-                                              } catch (e) {
-                                                Navigator.pop(context);
-                                                print("Error: $e");
-                                              }
-                                            },
-                                          ),
+                                                    Navigator.pop(context);
+                                                    Navigator.pop(context);
+                                                    fetchData();
+                                                  } catch (e) {
+                                                    Navigator.pop(context);
+                                                    print("Error: $e");
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 );
                               },
                             );
@@ -649,7 +726,7 @@ class _PateintProfileState extends State<PateintProfile> {
                               Icon(Icons.edit, size: 24),
                               SizedBox(width: 10),
                               Text(
-                                "Update Information ",
+                                "Update Information",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -686,7 +763,7 @@ class _PateintProfileState extends State<PateintProfile> {
                 child: Column(
                   children: [
                     QrImageView(
-                      data: qrData,
+                      data: qrDataString,
                       version: QrVersions.auto,
                       size: 200,
                       backgroundColor: Colors.white,
@@ -770,7 +847,7 @@ class _PateintProfileState extends State<PateintProfile> {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => PatientFeedback( ),
+                                builder: (context) => PatientFeedback(),
                               ),
                             );
                           },

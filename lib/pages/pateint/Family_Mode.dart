@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 
-// Model Class لكل عضو
 class FamilyMember {
-  String id;
-  String name;
-  String relation;
-  int age; // بدل DOB خليها سن مباشرة
-  String gender;
-  Uint8List? profileImage; // بدل File عشان Web يشتغل
+  final String id;
+  final String name;
+  final String relation;
+  final int age;
+  final String gender;
+  final String bloodGroup;
 
   FamilyMember({
     required this.id,
@@ -17,7 +18,7 @@ class FamilyMember {
     required this.relation,
     required this.age,
     required this.gender,
-    this.profileImage,
+    required this.bloodGroup,
   });
 }
 
@@ -31,288 +32,291 @@ class _FamilyScreenState extends State<FamilyScreen> {
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
 
-  final picker = ImagePicker();
+  final List<String> relations = [
+    "Son",
+    "Daughter",
+    "Father",
+    "Mother",
+    "Wife",
+    "Husband",
+  ];
+  final List<String> genders = ["Male", "Female"];
+  final List<String> bloodGroups = [
+    "A+",
+    "A-",
+    "B+",
+    "B-",
+    "O+",
+    "O-",
+    "AB+",
+    "AB-",
+  ];
 
-  int _idCounter = 1; 
+  CollectionReference get familyRef => FirebaseFirestore.instance
+      .collection('users')
+      .doc(FirebaseAuth.instance.currentUser!.uid)
+      .collection('family');
 
-  List<FamilyMember> familyMembers = [];
-
-  final List<String> relations = ["Son", "Daughter", "Father", "Mother"];
-  final List<String> genders = ["Male", "Female", "Other"];
-
-  void _showMemberDialog({FamilyMember? member, int? index}) {
+  void _showMemberDialog({FamilyMember? member}) {
     final _nameController = TextEditingController(text: member?.name ?? "");
+    final _ageController = TextEditingController(
+      text: member?.age.toString() ?? "",
+    );
     String selectedRelation = member?.relation ?? relations[0];
     String selectedGender = member?.gender ?? genders[0];
-    int? selectedAge = member?.age;
-    Uint8List? profileImage = member?.profileImage;
+    String selectedBlood = member?.bloodGroup ?? bloodGroups[0];
 
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: cardColor,
-            title: Text(
-              member == null ? "Add Family Member" : "Edit Family Member",
-              style: TextStyle(color: primaryBlue),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: "Name",
-                      labelStyle: TextStyle(color: primaryBlue),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                    ),
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: selectedRelation,
-                    dropdownColor: cardColor,
-                    decoration: InputDecoration(
-                      labelText: "Relation",
-                      labelStyle: TextStyle(color: primaryBlue),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                    ),
-                    style: TextStyle(color: Colors.white),
-                    items: relations
-                        .map((rel) => DropdownMenuItem(
-                      value: rel,
-                      child: Text(rel),
-                    ))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedRelation = val);
-                    },
-                  ),
-                  SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    value: selectedGender,
-                    dropdownColor: cardColor,
-                    decoration: InputDecoration(
-                      labelText: "Gender",
-                      labelStyle: TextStyle(color: primaryBlue),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                    ),
-                    style: TextStyle(color: Colors.white),
-                    items: genders
-                        .map((g) => DropdownMenuItem(
-                      value: g,
-                      child: Text(g),
-                    ))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedGender = val);
-                    },
-                  ),
-                  SizedBox(height: 10),
-                  TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: "Age",
-                      labelStyle: TextStyle(color: primaryBlue),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: primaryBlue),
-                      ),
-                    ),
-                    style: TextStyle(color: Colors.white),
-                    onChanged: (val) {
-                      int? ageVal = int.tryParse(val);
-                      if (ageVal != null) setDialogState(() => selectedAge = ageVal);
-                    },
-                  ),
-                  SizedBox(height: 10),
-                ElevatedButton.icon(
-  onPressed: () async {
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setDialogState(() {
-        profileImage = bytes;
-      });
-    }
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.white.withOpacity(0.05), 
-    foregroundColor: primaryBlue, 
-    side: BorderSide(color: primaryBlue.withOpacity(0.5)), 
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-  ),
-  icon: Icon(Icons.camera_alt_outlined, size: 20),
-  label: Text("Select Photo", style: TextStyle(fontWeight: FontWeight.w600)),
-),
-                  if (profileImage != null)
-                    Padding(
-                      padding: EdgeInsets.only(top: 10),
-                      child: CircleAvatar(
-                        radius: 50,
-                    backgroundImage: MemoryImage(profileImage!),
-                      ),
-                    ),
-                ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("Cancel", style: TextStyle(color: primaryBlue)),
+              title: Text(
+                member == null ? "Add Family Member" : "Edit Details",
+                style: TextStyle(
+                  color: primaryBlue,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: primaryBlue),
-                onPressed: () {
-                  String name = _nameController.text.trim();
-                  if (name.isEmpty || selectedAge == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Please fill all fields")));
-                    return;
-                  }
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTextField(_nameController, "Full Name", Icons.person),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            _ageController,
+                            "Age",
+                            Icons.cake,
+                            isNumber: true,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildDropdown(
+                            "Blood",
+                            selectedBlood,
+                            bloodGroups,
+                            (val) => setDialogState(() => selectedBlood = val!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    _buildDropdown(
+                      "Relation",
+                      selectedRelation,
+                      relations,
+                      (val) => setDialogState(() => selectedRelation = val!),
+                    ),
+                    const SizedBox(height: 15),
+                    _buildDropdown(
+                      "Gender",
+                      selectedGender,
+                      genders,
+                      (val) => setDialogState(() => selectedGender = val!),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(color: Colors.white60),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (_nameController.text.isEmpty ||
+                        _ageController.text.isEmpty)
+                      return;
 
-                  setState(() {
+                    Map<String, dynamic> data = {
+                      'name': _nameController.text.trim(),
+                      'relation': selectedRelation,
+                      'gender': selectedGender,
+                      'bloodGroup': selectedBlood,
+                      'age': int.parse(_ageController.text.trim()),
+                      'updatedAt': FieldValue.serverTimestamp(),
+                    };
+
                     if (member == null) {
-                      familyMembers.add(FamilyMember(
-                        id: _idCounter.toString(),
-                        name: name,
-                        relation: selectedRelation,
-                        gender: selectedGender,
-                        age: selectedAge!,
-                        profileImage: profileImage,
-                      ));
-                      _idCounter++;
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text("Member Added")));
+                      await familyRef.add(data);
                     } else {
-                      familyMembers[index!] = FamilyMember(
-                        id: member.id,
-                        name: name,
-                        relation: selectedRelation,
-                        gender: selectedGender,
-                        age: selectedAge!,
-                        profileImage: profileImage,
-                      );
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text("Member Updated")));
+                      await familyRef.doc(member.id).update(data);
                     }
-                  });
-
-                  Navigator.pop(context);
-                },
-                child: Text(member == null ? "Add" : "Update",
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          );
-        });
-      },
-    );
-  }
-
-  void _deleteMember(int index) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: cardColor,
-          title: Text("Delete Member", style: TextStyle(color: primaryBlue)),
-          content: Text(
-            "Are you sure you want to delete ${familyMembers[index].name}?",
-            style: TextStyle(color: Colors.white),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: primaryBlue)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () {
-                setState(() => familyMembers.removeAt(index));
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text("Member Deleted")));
-              },
-              child: Text("Delete", style: TextStyle(color: Colors.white)),
-            ),
-          ],
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    member == null ? "Add" : "Save",
+                    style: TextStyle(
+                      color: bgColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildMemberCard(FamilyMember member, int index) {
-    IconData genderIcon;
-    Color iconColor;
-    switch (member.gender) {
-      case "Male":
-        genderIcon = Icons.male;
-        iconColor = Colors.blueAccent;
-        break;
-      case "Female":
-        genderIcon = Icons.female;
-        iconColor = Colors.pinkAccent;
-        break;
-      default:
-        genderIcon = Icons.person;
-        iconColor = Colors.grey;
-    }
-
-    return Card(
-      color: cardColor,
-      margin: EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: iconColor,
-          backgroundImage:
-          member.profileImage != null ? MemoryImage(member.profileImage!) : null,
-          child: member.profileImage == null
-              ? Icon(genderIcon, color: Colors.white)
-              : null,
+  @override
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        title: const Text(
+          "Family Members",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        title: Text(member.name,
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        color: Colors.transparent,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryBlue,
+            minimumSize: const Size(double.infinity, 55),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            elevation: 5,
+          ),
+          icon: const Icon(Icons.add_circle_outline, color: Color(0xFF0B1C2D)),
+          label: const Text(
+            "Add New Member",
+            style: TextStyle(
+              color: Color(0xFF0B1C2D),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          onPressed: () => _showMemberDialog(),
+        ),
+      ),
+
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: familyRef.snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: CircularProgressIndicator(color: primaryBlue),
+              );
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.only(top: 10, bottom: 20),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                var doc = snapshot.data!.docs[index];
+                var data = doc.data() as Map<String, dynamic>;
+                FamilyMember member = FamilyMember(
+                  id: doc.id,
+                  name: data['name'] ?? '',
+                  relation: data['relation'] ?? '',
+                  age: data['age'] ?? 0,
+                  gender: data['gender'] ?? '',
+                  bloodGroup: data['bloodGroup'] ?? '',
+                );
+                return _buildMemberCard(member);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberCard(FamilyMember member) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: CircleAvatar(
+          radius: 30,
+          backgroundColor: primaryBlue.withOpacity(0.1),
+          child: Icon(
+            member.gender == "Male" ? Icons.face : Icons.face_3,
+            color: primaryBlue,
+            size: 30,
+          ),
+        ),
+        title: Text(
+          member.name,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "${member.relation} • ${member.age} yrs",
-              style: TextStyle(color: Colors.white70),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                _buildBadge(member.relation, primaryBlue),
+                const SizedBox(width: 8),
+                _buildBadge(member.bloodGroup, Colors.redAccent),
+              ],
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 8),
             Text(
-              "ID: ${member.id}",
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              "${member.age} Years Old",
+              style: const TextStyle(color: Colors.white54),
             ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(Icons.edit, color: Colors.white),
-              onPressed: () => _showMemberDialog(member: member, index: index),
+        trailing: PopupMenuButton(
+          icon: const Icon(Icons.more_vert, color: Colors.white54),
+          color: cardColor,
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              child: const Text("Edit", style: TextStyle(color: Colors.white)),
+              onTap: () => Future.delayed(
+                Duration.zero,
+                () => _showMemberDialog(member: member),
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: () => _deleteMember(index),
+            PopupMenuItem(
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.redAccent),
+              ),
+              onTap: () => familyRef.doc(member.id).delete(),
             ),
           ],
         ),
@@ -320,60 +324,92 @@ class _FamilyScreenState extends State<FamilyScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        title: Text("Family Members", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-        ),
-        backgroundColor: bgColor,
-        elevation: 0,
-
-        centerTitle: true,
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                minimumSize: Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: Icon(Icons.add, color: Colors.white),
-              label: Text("Add Member", style: TextStyle(color: Colors.white)),
-              onPressed: () => _showMemberDialog(),
-            ),
-            SizedBox(height: 12),
-            Expanded(
-
-              child: familyMembers.isEmpty
-      ? Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.group_add_outlined, color: Colors.white10, size: 100),
-              SizedBox(height: 16),
-              Text(
-                "No family members yet.\nStart by adding one!",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white38, fontSize: 16),
-              ),
-            ],
-          ),
-        ):ListView.builder(
-                itemCount: familyMembers.length,
-                itemBuilder: (context, index) {
-                  return _buildMemberCard(familyMembers[index], index);
-                },
-              ),
-            ),
-          ],
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool isNumber = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: primaryBlue.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: primaryBlue, size: 20),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryBlue),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown(
+    String label,
+    String value,
+    List<String> items,
+    Function(String?) onChanged,
+  ) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      dropdownColor: cardColor,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: primaryBlue.withOpacity(0.7)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
+        ),
+      ),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.family_restroom,
+            color: Colors.white.withOpacity(0.05),
+            size: 100,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "No members added yet",
+            style: TextStyle(color: Colors.white.withOpacity(0.3)),
+          ),
+        ],
       ),
     );
   }

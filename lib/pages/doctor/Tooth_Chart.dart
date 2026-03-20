@@ -6,21 +6,18 @@ import 'package:smart_dental_care_system/main.dart';
 
 import '../../services/database_service.dart';
 
-/// 🎨 Colors
-final Color bgColor =     Color(0xFF0B1C2D);
-final Color cardColor =   Color(0xFF112B3C);
+final Color bgColor = Color(0xFF0B1C2D);
+final Color cardColor = Color(0xFF112B3C);
 final Color primaryBlue = Color(0xFF2EC4FF);
 Color toothDefault = Color(0xFF1B263B);
-Color cavity =  Color(0xFFFF4D6D);
+Color cavity = Color(0xFFFF4D6D);
 Color filling = Color(0xFF00E5FF);
-Color crown =   Color(0xFFFFC300);
+Color crown = Color(0xFFFFC300);
 Color healthy = Color(0xFF06D6A0);
 
-/// 🦷 Tooth Chart Screen
 class Toothchart extends StatefulWidget {
-  final String patientId; // 1. ضيف السطر ده عشان يستلم الـ ID
+  final String patientId;
 
-  // 2. حدث الـ Constructor بالشكل ده
   const Toothchart({super.key, required this.patientId});
 
   @override
@@ -28,8 +25,6 @@ class Toothchart extends StatefulWidget {
 }
 
 class _ToothchartState extends State<Toothchart> {
-  // ... باقي كود الصفحة عندك ...
-
   int? selectedTooth;
   bool showNoteCard = false;
   bool showStatusCard = false;
@@ -38,72 +33,66 @@ class _ToothchartState extends State<Toothchart> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: bgColor,
-    appBar:  AppBar(
-       leading: IconButton(
+      appBar: AppBar(
+        leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () {
-            Navigator.of(
-              context,
-            ).pop();
+            Navigator.of(context).pop();
           },
         ),
-      backgroundColor: bgColor,
-      elevation: 0,
-      titleSpacing: 0,
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Tooth Chart",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+        backgroundColor: bgColor,
+        elevation: 0,
+        titleSpacing: 0,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Tooth Chart",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-
-        ],
-      ),
-    ),
-        body: StreamBuilder<DocumentSnapshot>(
-            stream: DatabaseService().getTeethStream(widget.patientId),
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data!.exists) {
-                // كود لتحديث قائمة الـ teeth المحلية من بيانات فايربيز
-                var data = snapshot.data!.data() as Map<String, dynamic>;
-                if (data.containsKey('teeth_chart')) {
-                  var chart = data['teeth_chart'] as Map<String, dynamic>;
-                  chart.forEach((key, value) {
-                    int index = int.parse(key) - 1;
-                    teeth[index].status = value['status'];
-                    teeth[index].notes = value['notes'];
-                    teeth[index].isTreated = true;
-                  });
-                }
-              }
-
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildHeaderCard(),
-                    const SizedBox(height: 28),
-                    _buildTeethChart(),
-                    buildStatusCard(),
-                    buildNotesCard(),
-                    buildRecentTreatments(),
-                  ],
-                ),
-              );
-            },
+          ],
         ),
+      ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: DatabaseService().getTeethStream(widget.patientId),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data!.exists) {
+            var data = snapshot.data!.data() as Map<String, dynamic>;
+            if (data.containsKey('teeth_chart')) {
+              var chart = data['teeth_chart'] as Map<String, dynamic>;
+              chart.forEach((key, value) {
+                int index = int.parse(key) - 1;
+                teeth[index].status = value['status'];
+                teeth[index].notes = value['notes'];
+                teeth[index].isTreated = true;
+              });
+            }
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildHeaderCard(),
+                const SizedBox(height: 28),
+                _buildTeethChart(),
+                buildStatusCard(),
+                buildNotesCard(),
+                buildRecentTreatments(),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  /// 🦷 Header Card
   Widget _buildHeaderCard() {
     return Container(
       width: double.infinity,
@@ -161,7 +150,6 @@ class _ToothchartState extends State<Toothchart> {
     );
   }
 
-  /// 🦷 Teeth Chart
   Widget _buildTeethChart() {
     return Container(
       width: double.infinity,
@@ -220,8 +208,8 @@ class _ToothchartState extends State<Toothchart> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                 Divider(color: Colors.grey, thickness: 1),
-                 SizedBox(height: 8),
+                Divider(color: Colors.grey, thickness: 1),
+                SizedBox(height: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -340,7 +328,6 @@ class _ToothchartState extends State<Toothchart> {
     );
   }
 
-  /// 🦷 Single Tooth
   Widget buildTooth(ToothModel tooth, {bool isUpperJaw = true}) {
     Color toothColor = getToothColor(tooth);
     bool isSelected = selectedTooth == tooth.number;
@@ -398,7 +385,6 @@ class _ToothchartState extends State<Toothchart> {
     );
   }
 
-  /// 🎨 Tooth Color
   Color getToothColor(ToothModel tooth) {
     if (!tooth.isTreated) return const Color(0xFF1E2D3D);
 
@@ -413,11 +399,9 @@ class _ToothchartState extends State<Toothchart> {
         return healthy;
       default:
         return toothDefault;
-
     }
   }
 
-  ///  Status Card
   Widget buildStatusCard() {
     if (!showStatusCard || selectedTooth == null) return const SizedBox();
 
@@ -500,26 +484,27 @@ class _ToothchartState extends State<Toothchart> {
       ),
     );
   }
-Widget buildRecentTreatments() {
-  final treatedTeeth = teeth
-      .where((t) => t.isTreated)
-      .toList()
-      .reversed
-      .toList();
 
-  return Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(top: 20),
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white10),
-    ),
+  Widget buildRecentTreatments() {
+    final treatedTeeth = teeth
+        .where((t) => t.isTreated)
+        .toList()
+        .reversed
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
 
       child: ExpansionTile(
         iconColor: primaryBlue,
         shape: RoundedRectangleBorder(side: BorderSide.none),
-collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
+        collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
         collapsedIconColor: Colors.white54,
         title: const Text(
           "Recent Treatments",
@@ -536,7 +521,7 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
             child: Column(
               children: [
                 if (treatedTeeth.isEmpty)
-                   Center(
+                  Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 10),
                       child: Text(
@@ -549,11 +534,20 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
                 ...treatedTeeth.map((tooth) {
                   Color statusColor;
                   switch (tooth.status) {
-                    case "cavity": statusColor = cavity; break;
-                    case "crown": statusColor = crown; break;
-                    case "filling": statusColor = filling; break;
-                    case "healthy": statusColor = healthy; break;
-                    default: statusColor = toothDefault;
+                    case "cavity":
+                      statusColor = cavity;
+                      break;
+                    case "crown":
+                      statusColor = crown;
+                      break;
+                    case "filling":
+                      statusColor = filling;
+                      break;
+                    case "healthy":
+                      statusColor = healthy;
+                      break;
+                    default:
+                      statusColor = toothDefault;
                   }
 
                   return Column(
@@ -567,7 +561,9 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
                                 children: [
                                   TextSpan(
                                     text: "Tooth #${tooth.number}  ",
-                                    style: const TextStyle(color: Colors.white70),
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                   TextSpan(
                                     text: tooth.status.toUpperCase(),
@@ -582,7 +578,10 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
                           ),
                           Text(
                             "Today",
-                            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -597,7 +596,7 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
                             ),
                           ),
                         ),
-                       Divider(color: Colors.white12, height: 20),
+                      Divider(color: Colors.white12, height: 20),
                     ],
                   );
                 }).toList(),
@@ -606,9 +605,8 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
           ),
         ],
       ),
-
-  );
-}
+    );
+  }
 
   Widget buildNotesCard() {
     if (!showNoteCard || selectedTooth == null) return const SizedBox();
@@ -704,21 +702,18 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
             ),
             const SizedBox(height: 16),
             GestureDetector(
-              // ابحث عن GestureDetector بتاع Save Changes وغير الـ onTap
               onTap: () async {
                 final user = widget.patientId;
 
                 if (user == null) return;
 
-                // 1. حفظ في فايربيز
                 await DatabaseService().updateToothStatus(
-                  patientId: widget.patientId, // أو الـ ID بتاع المريض لو اللي داخل دكتور
+                  patientId: widget.patientId,
                   toothNumber: selectedTooth!,
                   status: status,
                   notes: notesController.text,
                 );
 
-                // 2. تحديث الـ UI المحلي (اختياري لأن الـ StreamBuilder هيحدثها أوتوماتيك)
                 setState(() {
                   teeth[selectedTooth! - 1].notes = notesController.text;
                   teeth[selectedTooth! - 1].isTreated = true;
@@ -801,8 +796,6 @@ collapsedShape: RoundedRectangleBorder(side: BorderSide.none),
       ),
     );
   }
-
-  
 }
 
 class ToothModel {

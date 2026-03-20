@@ -208,10 +208,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-
-              // _buildAppBarAction(Icons.videocam_rounded),
-              // const SizedBox(width: 10),
-              // _buildAppBarAction(Icons.more_vert_rounded),
             ],
           ),
         ),

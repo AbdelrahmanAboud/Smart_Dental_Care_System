@@ -82,7 +82,6 @@ class _LoginState extends State<Login> {
                         height: 100,
                         decoration: BoxDecoration(
                           color: patientSelected
-
                               ? Color(0xFF112B3C)
                               : Color(0xFF141C2F),
                           borderRadius: BorderRadius.circular(14),
@@ -123,7 +122,6 @@ class _LoginState extends State<Login> {
                     ),
                   ),
 
-                  // Doctor Card
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -180,7 +178,6 @@ class _LoginState extends State<Login> {
                     ),
                   ),
 
-                  // Receptionist Card
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -375,7 +372,8 @@ class _LoginState extends State<Login> {
                           Navigator.pop(context);
                         }
                       } catch (e) {
-                        Navigator.pop(context); print("Login error: $e");
+                        Navigator.pop(context);
+                        print("Login error: $e");
                         showError("Login failed: $e");
                       }
                     },
@@ -653,7 +651,7 @@ class _LoginState extends State<Login> {
     Navigator.of(
       context,
     ).pushReplacement(MaterialPageRoute(builder: (context) => nextScreen));
-  } 
+  }
 
   void showLoading(BuildContext context) {
     showDialog(

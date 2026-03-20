@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_dental_care_system/firebase_options.dart';
-import 'package:smart_dental_care_system/pages/doctor/AddRecordPage.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Available_Slots.dart';
 import 'package:smart_dental_care_system/pages/doctor/Patient_Clinical_View.dart';
 import 'package:smart_dental_care_system/pages/doctor/Treatment_Plan.dart';
@@ -25,35 +24,32 @@ final Color cardColor = const Color(0xFF112B3C);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  FirebaseDatabase.instance.databaseURL = "https://smart-dental-care-system-622e0-default-rtdb.europe-west1.firebasedatabase.app/";
+  FirebaseDatabase.instance.databaseURL =
+      "https://smart-dental-care-system-622e0-default-rtdb.europe-west1.firebasedatabase.app/";
   testFirestore();
   testRealtime();
 
-  runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Login(),
-      )
-
-  );
+  runApp(MaterialApp(debugShowCheckedModeBanner: false, home: Login()));
 }
 
 void testRealtime() async {
   try {
-    await FirebaseDatabase.instance.ref("connection_test").set("Connected at ${DateTime.now()}");
+    await FirebaseDatabase.instance
+        .ref("connection_test")
+        .set("Connected at ${DateTime.now()}");
     print("Realtime Database Connected Successfully!");
   } catch (e) {
     print("Realtime Database Error: $e");
   }
 }
+
 void testFirestore() async {
   try {
-    final snapshot = await FirebaseFirestore.instance.collection('reviews').get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('reviews')
+        .get();
     print("Docs count: ${snapshot.docs.length}");
   } catch (e) {
     print("Firestore error: $e");
