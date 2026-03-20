@@ -5,7 +5,6 @@ import 'package:smart_dental_care_system/pages/pateint/Patient_Home.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient-Record.dart';
 import 'package:smart_dental_care_system/pages/pateint/Patient_Reminders.dart';
 
-
 class NavigitionBar extends StatefulWidget {
   @override
   State<NavigitionBar> createState() => _NavigitionBarState();
@@ -28,8 +27,7 @@ class _NavigitionBarState extends State<NavigitionBar> {
       PatientHome(),
       PatientRecord(),
       PatientReminders(),
-      PatientSelectionPage(
-      ),
+      PatientSelectionPage(),
     ];
   }
 
@@ -61,7 +59,7 @@ class _NavigitionBarState extends State<NavigitionBar> {
             icon: Icon(Icons.notifications),
             label: "Reminders",
           ),
-         
+
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
         ],
       ),

@@ -14,46 +14,51 @@ final Color cardColor = const Color(0xFF0F2235);
 final Color primaryBlue = const Color(0xFF2EC4FF);
 
 class _ClinicTrafficState extends State<ClinicTraffic> {
-  // جلب المرضى فقط من كوليكشن users
   final Stream<QuerySnapshot> _usersStream = FirebaseFirestore.instance
       .collection('users')
       .where('role', isEqualTo: 'Patient')
       .snapshots();
-  Map<String, String> calculatePerformance(List<PatientModel> patients, List<QueryDocumentSnapshot> reviewsDocs) {
+  Map<String, String> calculatePerformance(
+    List<PatientModel> patients,
+    List<QueryDocumentSnapshot> reviewsDocs,
+  ) {
     double totalWaitMinutes = 0;
     int patientsWithStartTime = 0;
 
     double totalConsultMinutes = 0;
     int patientsDone = 0;
 
-    // 1. حساب أوقات الانتظار والكشف
     for (var p in patients) {
       if (p.arrivedTime != null && p.consultationStart != null) {
-        totalWaitMinutes += p.consultationStart!.difference(p.arrivedTime!).inMinutes.abs();
+        totalWaitMinutes += p.consultationStart!
+            .difference(p.arrivedTime!)
+            .inMinutes
+            .abs();
         patientsWithStartTime++;
       }
 
       if (p.consultationStart != null && p.consultationEnd != null) {
-        totalConsultMinutes += p.consultationEnd!.difference(p.consultationStart!).inMinutes.abs();
+        totalConsultMinutes += p.consultationEnd!
+            .difference(p.consultationStart!)
+            .inMinutes
+            .abs();
         patientsDone++;
       }
     }
 
-    // 2. حساب التقييم الحقيقي من كوليكشن الـ reviews
     double totalRating = 0;
     double averageRating = 0;
 
     if (reviewsDocs.isNotEmpty) {
       for (var doc in reviewsDocs) {
         var data = doc.data() as Map<String, dynamic>;
-        print("Review found: ${data['rating']}"); // السطر ده هيعرفك الداتا مقروءة ولا لأ
+        print("Review found: ${data['rating']}");
         totalRating += (data['rating'] as num? ?? 0).toDouble();
       }
       averageRating = totalRating / reviewsDocs.length;
       print("Average calculated: $averageRating");
     }
 
-    // حساب المتوسطات كـ نصوص
     String avgWait = patientsWithStartTime > 0
         ? "${(totalWaitMinutes / patientsWithStartTime).toStringAsFixed(1)} min"
         : "Pending...";
@@ -62,52 +67,65 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
         ? "${(totalConsultMinutes / patientsDone).toStringAsFixed(1)} min"
         : "Pending...";
 
-    // 3. الـ Return النهائي (لازم يكون هنا في نهاية الدالة)
     return {
       "wait": avgWait,
       "consult": avgConsult,
       "rating": averageRating > 0
           ? "${averageRating.toStringAsFixed(1)}/5"
-          : "5.0/5" // قيمة افتراضية لو مفيش ريفيوهات
+          : "5.0/5",
     };
   }
-  // دالة تحديث الحالة وتسجيل الوقت لحظة الضغط
+
   Future<void> _updatePatientFlow(String docId, String nextStatus) async {
     try {
       Map<String, dynamic> dataToUpdate = {'status': nextStatus};
 
-      // تعديل السطر ده: لو رايح للانتظار سجل إنه وصل دلوقتي
-      if (nextStatus == 'Waiting') dataToUpdate['arrivedTime'] = FieldValue.serverTimestamp();
+      if (nextStatus == 'Waiting')
+        dataToUpdate['arrivedTime'] = FieldValue.serverTimestamp();
 
-      if (nextStatus == 'With Doctor') dataToUpdate['startTime'] = FieldValue.serverTimestamp();
-      if (nextStatus == 'Done') dataToUpdate['endTime'] = FieldValue.serverTimestamp();
+      if (nextStatus == 'With Doctor')
+        dataToUpdate['startTime'] = FieldValue.serverTimestamp();
+      if (nextStatus == 'Done')
+        dataToUpdate['endTime'] = FieldValue.serverTimestamp();
 
-      await FirebaseFirestore.instance.collection('users').doc(docId).update(dataToUpdate);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(docId)
+          .update(dataToUpdate);
     } catch (e) {
       print("Error: $e");
     }
   }
+
   @override
   Widget build(BuildContext context) {
-
     return StreamBuilder<QuerySnapshot>(
       stream: _usersStream,
       builder: (context, snapshot) {
-
-        if (snapshot.hasError) return const Scaffold(body: Center(child: Text("Connection Error")));
+        if (snapshot.hasError)
+          return const Scaffold(body: Center(child: Text("Connection Error")));
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(backgroundColor: bgColor, body: const Center(child: CircularProgressIndicator(color: Colors.cyanAccent)));
+          return Scaffold(
+            backgroundColor: bgColor,
+            body: const Center(
+              child: CircularProgressIndicator(color: Colors.cyanAccent),
+            ),
+          );
         }
 
         final List<PatientModel> patients = snapshot.data!.docs.map((doc) {
-          return PatientModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          return PatientModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+          );
         }).toList();
 
-        // حسابات الإحصائيات العلوية
         int total = patients.length;
         int completed = patients.where((p) => p.status == "Done").length;
         int waiting = patients.where((p) => p.status == "Waiting").length;
-        int withDoctor = patients.where((p) => p.status == "With Doctor").length;
+        int withDoctor = patients
+            .where((p) => p.status == "With Doctor")
+            .length;
         int arrived = patients.where((p) => p.status == "Arrived").length;
 
         return Scaffold(
@@ -116,10 +134,21 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
             backgroundColor: bgColor,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 20,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
-            title: const Text("Clinic Traffic", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            title: const Text(
+              "Clinic Traffic",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -130,8 +159,6 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                 _buildStatsGrid(arrived, waiting, withDoctor, completed),
                 const SizedBox(height: 20),
 
-                // قائمة الكروت (Cards)
-                // داخل الـ ListView.builder في كودك الحالي
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -140,37 +167,39 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                     final patient = patients[index];
 
                     return FutureBuilder<QuerySnapshot>(
-                      // هنجيب كل العلاجات عشان نتأكد هي شايفة المرضى ولا لأ
-                      future: FirebaseFirestore.instance.collection('patient_treatments').get(),
+                      future: FirebaseFirestore.instance
+                          .collection('patient_treatments')
+                          .get(),
                       builder: (context, treatmentSnapshot) {
                         String doctorName = "Not Assigned";
 
                         if (treatmentSnapshot.hasData) {
-                          // البحث يدويًا داخل الداتا اللي رجعت
                           try {
                             final doc = treatmentSnapshot.data!.docs.firstWhere(
-                                  (d) {
+                              (d) {
                                 var data = d.data() as Map<String, dynamic>;
-                                // بنجرب نقارن بكل الطرق الممكنة (كـ نص أو كـ مرجع)
                                 var pId = data['patientId'];
 
                                 if (pId is DocumentReference) {
-                                  return pId.id == patient.id; // لو كان مرجع
+                                  return pId.id == patient.id;
                                 }
-                                return pId.toString().trim() == patient.id.trim(); // لو كان نص
+                                return pId.toString().trim() ==
+                                    patient.id.trim();
                               },
                             );
 
-                            var treatmentData = doc.data() as Map<String, dynamic>;
-                            doctorName = treatmentData['doctorName'] ?? "No Name Field";
-                            print("✅ أخيراً لقيناه! الدكتور: $doctorName");
+                            var treatmentData =
+                                doc.data() as Map<String, dynamic>;
+                            doctorName =
+                                treatmentData['doctorName'] ?? "No Name Field";
+                            print("✅ Found it! Doctor: $doctorName");
                           } catch (e) {
-                            // لو ملقاش حاجة في الـ firstWhere
-                            print("❌ المريض ${patient.name} ملوش سجل في patient_treatments");
+                            print(
+                              "❌ Patient ${patient.name} has no record in patient_treatments",
+                            );
                           }
                         }
 
-                        // الـ FutureBuilder التاني بتاع المواعيد بيكمل عادي هنا...
                         return FutureBuilder<QuerySnapshot>(
                           future: FirebaseFirestore.instance
                               .collection('appointments')
@@ -178,15 +207,25 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                               .limit(1)
                               .get(),
                           builder: (context, apptSnapshot) {
-                            // ... (نفس كود المواعيد بتاعك) ...
                             String apptTime = "--:--";
-                            if (apptSnapshot.hasData && apptSnapshot.data!.docs.isNotEmpty) {
-                              var apptData = apptSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+                            if (apptSnapshot.hasData &&
+                                apptSnapshot.data!.docs.isNotEmpty) {
+                              var apptData =
+                                  apptSnapshot.data!.docs.first.data()
+                                      as Map<String, dynamic>;
                               var rawTime = apptData['slot'];
-                              apptTime = (rawTime is Timestamp) ? DateFormat('h:mm a').format(rawTime.toDate()) : rawTime.toString();
+                              apptTime = (rawTime is Timestamp)
+                                  ? DateFormat(
+                                      'h:mm a',
+                                    ).format(rawTime.toDate())
+                                  : rawTime.toString();
                             }
 
-                            return _buildPatientCard(patient, doctorName, apptTime);
+                            return _buildPatientCard(
+                              patient,
+                              doctorName,
+                              apptTime,
+                            );
                           },
                         );
                       },
@@ -195,23 +234,20 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                 ),
 
                 const SizedBox(height: 20),
-              // داخل الـ build بعد تعريف List<PatientModel> patients
 
-// انزل تحت عند استدعاء الـ Performance Section وغيره ليكون هكذا:
-                // استبدل سطر استدعاء _buildPerformanceSection القديم بهذا الكود:
                 FutureBuilder<QuerySnapshot>(
-                  future: FirebaseFirestore.instance.collection('reviews').get(),
+                  future: FirebaseFirestore.instance
+                      .collection('reviews')
+                      .get(),
                   builder: (context, reviewSnapshot) {
-                    // قائمة الريفيوهات (لو لسه بيحمل هتبقى فاضية)
-                    List<QueryDocumentSnapshot> reviewsDocs = reviewSnapshot.data?.docs ?? [];
+                    List<QueryDocumentSnapshot> reviewsDocs =
+                        reviewSnapshot.data?.docs ?? [];
 
-                    // مناداة الدالة بالـ 2 Arguments اللي محتاجاهم
                     var perfData = calculatePerformance(patients, reviewsDocs);
 
                     return _buildPerformanceSection(perfData);
                   },
                 ),
-
               ],
             ),
           ),
@@ -220,8 +256,11 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
     );
   }
 
-  // الكارت الخاص بالمريض (نفس تصميم الصورة)
-  Widget _buildPatientCard(PatientModel patient, String realDoctor, String realApptTime) {
+  Widget _buildPatientCard(
+    PatientModel patient,
+    String realDoctor,
+    String realApptTime,
+  ) {
     Color statusColor = _getClr(patient.status);
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -230,14 +269,19 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white10),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // الدائرة الجانبية مع الأيقونة
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -246,18 +290,22 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: statusColor.withOpacity(0.5), width: 2),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.5),
+                        width: 2,
+                      ),
                     ),
                   ),
                   Icon(
-                    patient.status == 'Done' ? FontAwesomeIcons.check : FontAwesomeIcons.user,
+                    patient.status == 'Done'
+                        ? FontAwesomeIcons.check
+                        : FontAwesomeIcons.user,
                     color: statusColor,
                     size: 20,
                   ),
                 ],
               ),
               const SizedBox(width: 15),
-              // بيانات المريض
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,28 +313,53 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(patient.name, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                        Text(patient.status, style: TextStyle(color: statusColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                        Text(
+                          patient.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          patient.status,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text("Dr. $realDoctor", style: const TextStyle(color: Colors.white70, fontSize: 14)),                    // عرض الأوقات
-                    // داخل دالة بناء الكارت
+                    Text(
+                      "Dr. $realDoctor",
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
                     Row(
                       children: [
-                        _timeTag("Appt: $realApptTime"), // وقت الحجز الحقيقي من Appointments
+                        _timeTag("Appt: $realApptTime"),
                         const SizedBox(width: 10),
-                        // ابحث عن سطر _timeTag في دالة _buildPatientCard واستبدله بهذا:
-                        _timeTag("Arr: ${patient.arrivedTime != null
-                            ? DateFormat('h:mm a').format(patient.arrivedTime!)
-                            : 'Not Arrived'}"), // وقت الوصول اللي بيتحدث بالزرار
+                        _timeTag(
+                          "Arr: ${patient.arrivedTime != null ? DateFormat('h:mm a').format(patient.arrivedTime!) : 'Not Arrived'}",
+                        ),
                       ],
                     ),
 
                     if (patient.status == 'Done')
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text("Completed Treatment", style: TextStyle(color: statusColor, fontSize: 13, fontWeight: FontWeight.w500)),
+                        child: Text(
+                          "Completed Treatment",
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -294,7 +367,6 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
             ],
           ),
           const SizedBox(height: 15),
-          // زر الأكشن (يتغير حسب الحالة)
           _buildActionButtons(patient),
         ],
       ),
@@ -304,18 +376,36 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
   Widget _timeTag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(6)),
-      child: Text(text, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white54, fontSize: 11),
+      ),
     );
   }
 
   Widget _buildActionButtons(PatientModel patient) {
     if (patient.status == 'Arrived') {
-      return _btn("Move to Waiting Room", Colors.teal, () => _updatePatientFlow(patient.id, "Waiting"));
+      return _btn(
+        "Move to Waiting Room",
+        Colors.teal,
+        () => _updatePatientFlow(patient.id, "Waiting"),
+      );
     } else if (patient.status == 'Waiting') {
-      return _btn("Notify Doctor", primaryBlue, () => _updatePatientFlow(patient.id, "With Doctor"));
+      return _btn(
+        "Notify Doctor",
+        primaryBlue,
+        () => _updatePatientFlow(patient.id, "With Doctor"),
+      );
     } else if (patient.status == 'With Doctor') {
-      return _btn("Mark as Completed", Colors.green, () => _updatePatientFlow(patient.id, "Done"));
+      return _btn(
+        "Mark as Completed",
+        Colors.green,
+        () => _updatePatientFlow(patient.id, "Done"),
+      );
     }
     return const SizedBox.shrink();
   }
@@ -325,14 +415,24 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
       width: double.infinity,
       height: 42,
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: clr, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: clr,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
         onPressed: onTap,
-        child: Text(txt, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(
+          txt,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
 
-  // المربعات الإحصائية بالأعلى
   Widget _buildStatsGrid(int arrived, int waiting, int doctor, int done) {
     return GridView.count(
       crossAxisCount: 2,
@@ -343,8 +443,18 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
       physics: const NeverScrollableScrollPhysics(),
       children: [
         _statTile(Icons.person_pin_circle, Colors.amber, "$arrived", "Arrived"),
-        _statTile(FontAwesomeIcons.clock, Colors.tealAccent, "$waiting", "Waiting"),
-        _statTile(FontAwesomeIcons.userDoctor, primaryBlue, "$doctor", "In Clinic"),
+        _statTile(
+          FontAwesomeIcons.clock,
+          Colors.tealAccent,
+          "$waiting",
+          "Waiting",
+        ),
+        _statTile(
+          FontAwesomeIcons.userDoctor,
+          primaryBlue,
+          "$doctor",
+          "In Clinic",
+        ),
         _statTile(Icons.check_circle, Colors.greenAccent, "$done", "Completed"),
       ],
     );
@@ -353,7 +463,11 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
   Widget _statTile(IconData icon, Color color, String value, String label) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white10),
+      ),
       child: Row(
         children: [
           Icon(icon, color: color, size: 22),
@@ -362,10 +476,20 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -382,16 +506,35 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
       ),
       child: Column(
         children: [
-          const Text("Total Patients Today", style: TextStyle(color: Colors.white70, fontSize: 13)),
-          Text("$total", style: TextStyle(color: primaryBlue, fontSize: 45, fontWeight: FontWeight.bold)),
+          const Text(
+            "Total Patients Today",
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          Text(
+            "$total",
+            style: TextStyle(
+              color: primaryBlue,
+              fontSize: 45,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("$completed completed", style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
+              Text(
+                "$completed completed",
+                style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+              ),
               const SizedBox(width: 10),
               const Text("|", style: TextStyle(color: Colors.white10)),
               const SizedBox(width: 10),
-              Text("$active active", style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+              Text(
+                "$active active",
+                style: const TextStyle(
+                  color: Colors.orangeAccent,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ],
@@ -403,14 +546,17 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white10)),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Clinic Performance",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          const Text(
+            "Clinic Performance",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 15),
           _perfRow("Avg. Wait Time", data['wait']!, Colors.greenAccent),
           _perfRow("Avg. Consultation", data['consult']!, primaryBlue),
@@ -426,8 +572,18 @@ class _ClinicTrafficState extends State<ClinicTraffic> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-          Text(val, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 13),
+          ),
+          Text(
+            val,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );

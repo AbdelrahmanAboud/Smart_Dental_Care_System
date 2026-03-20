@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +26,10 @@ class _OralScoreState extends State<RiskScore> {
   Future<void> _fetchOralScore() async {
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
 
       if (doc.exists && doc.data()!.containsKey('oralScore')) {
         setState(() {
@@ -43,7 +45,6 @@ class _OralScoreState extends State<RiskScore> {
     }
   }
 
-  // --- دالة توليد النصائح الذكية بناءً على البيانات ---
   List<String> _generateAITips() {
     if (oralData == null) return ["Complete your assessment to get AI tips."];
 
@@ -52,22 +53,22 @@ class _OralScoreState extends State<RiskScore> {
     int gum = oralData!['gumRisk'] ?? 0;
     int hygiene = oralData!['hygieneScore'] ?? 0;
 
-    // نصيحة بناءً على التسوس
     if (cavity > 50) {
-      tips.add("High cavity risk detected: Use fluoride toothpaste and limit sugar.");
+      tips.add(
+        "High cavity risk detected: Use fluoride toothpaste and limit sugar.",
+      );
     }
-    // نصيحة بناءً على اللثة
     if (gum > 50) {
-      tips.add("Gum sensitivity noted: Use a soft-bristled brush and floss gently.");
+      tips.add(
+        "Gum sensitivity noted: Use a soft-bristled brush and floss gently.",
+      );
     }
-    // نصيحة بناءً على النظافة العامة
     if (hygiene < 60) {
       tips.add("Improve hygiene: Ensure you're brushing for a full 2 minutes.");
     } else {
       tips.add("Great hygiene habits! Keep up the consistent flossing.");
     }
 
-    // نصائح عامة ثابتة لتكملة القائمة
     tips.add("Visit your dentist every 6 months for a professional cleaning.");
 
     return tips;
@@ -90,33 +91,39 @@ class _OralScoreState extends State<RiskScore> {
           Padding(
             padding: EdgeInsets.only(right: 15),
             child: Icon(Icons.notifications_none, color: Colors.white),
-          )
+          ),
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.cyanAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.cyanAccent),
+            )
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: _scoreCard()),
-            const SizedBox(height: 24),
-            const Text(
-              "Risk Breakdown",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: _scoreCard()),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Risk Breakdown",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  riskBar("Cavity Risk", oralData?['cavityRisk'] ?? 0),
+                  riskBar("Gum Disease", oralData?['gumRisk'] ?? 0),
+                  riskBar("Enamel Health", oralData?['enamelRisk'] ?? 0),
+                  riskBar("Oral Hygiene", oralData?['hygieneScore'] ?? 0),
+                  const SizedBox(height: 20),
+                  _tipsCard(),
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
-            const SizedBox(height: 14),
-            riskBar("Cavity Risk", oralData?['cavityRisk'] ?? 0),
-            riskBar("Gum Disease", oralData?['gumRisk'] ?? 0),
-            riskBar("Enamel Health", oralData?['enamelRisk'] ?? 0),
-            riskBar("Oral Hygiene", oralData?['hygieneScore'] ?? 0),
-            const SizedBox(height: 20),
-            _tipsCard(),
-            const SizedBox(height: 30),
-          ],
-        ),
-      ),
     );
   }
 
@@ -134,13 +141,17 @@ class _OralScoreState extends State<RiskScore> {
       ),
       child: Column(
         children: [
-          const Text("Your Oral Health Score", style: TextStyle(color: Colors.white70)),
+          const Text(
+            "Your Oral Health Score",
+            style: TextStyle(color: Colors.white70),
+          ),
           const SizedBox(height: 20),
           Stack(
             alignment: Alignment.center,
             children: [
               SizedBox(
-                height: 170, width: 170,
+                height: 170,
+                width: 170,
                 child: CircularProgressIndicator(
                   value: score / 100,
                   strokeWidth: 12,
@@ -150,35 +161,62 @@ class _OralScoreState extends State<RiskScore> {
               ),
               Column(
                 children: [
-                  Text("$score", style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
-                  const Text("OUT OF 100", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  Text(
+                    "$score",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    "OUT OF 100",
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
                 ],
-              )
+              ),
             ],
           ),
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(color: scoreColor.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
-            child: Text(riskLevelText, style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
+            decoration: BoxDecoration(
+              color: scoreColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              riskLevelText,
+              style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 15),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.cyanAccent.withOpacity(0.1),
               side: const BorderSide(color: Colors.cyanAccent),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               minimumSize: const Size(double.infinity, 45),
             ),
-            icon: const Icon(Icons.auto_awesome, color: Colors.cyanAccent, size: 18),
+            icon: const Icon(
+              Icons.auto_awesome,
+              color: Colors.cyanAccent,
+              size: 18,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AssessmentSurvey()),
+                MaterialPageRoute(
+                  builder: (context) => const AssessmentSurvey(),
+                ),
               ).then((_) => _fetchOralScore());
             },
-            label: const Text("Retake AI Assessment", style: TextStyle(color: Colors.cyanAccent)),
-          )
+            label: const Text(
+              "Retake AI Assessment",
+              style: TextStyle(color: Colors.cyanAccent),
+            ),
+          ),
         ],
       ),
     );
@@ -203,20 +241,21 @@ class _OralScoreState extends State<RiskScore> {
               SizedBox(width: 8),
               Text(
                 "Personalized AI Tips",
-                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          // عرض النصائح المتولدة ديناميكياً
           ...aiTips.map((tip) => TipRow(tip)).toList(),
         ],
       ),
     );
   }
 }
-
-// --- الـ Helper Widgets (تظل كما هي أو تعديلات بسيطة للجمالية) ---
 
 Widget riskBar(String title, int value) {
   final Color color = getScoreColor(value.toDouble());
@@ -235,7 +274,10 @@ Widget riskBar(String title, int value) {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title, style: const TextStyle(color: Colors.white70)),
-            Text("$value%", style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            Text(
+              "$value%",
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -266,13 +308,21 @@ class TipRow extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.check_circle_outline, size: 14, color: Colors.greenAccent),
+            child: Icon(
+              Icons.check_circle_outline,
+              size: 14,
+              color: Colors.greenAccent,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -292,5 +342,3 @@ String getRiskLevelText(double score) {
   if (score >= 50) return "Moderate Risk";
   return "High Risk";
 }
-
-

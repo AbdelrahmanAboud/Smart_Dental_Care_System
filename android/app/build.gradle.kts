@@ -29,8 +29,7 @@ android {
     defaultConfig {
         applicationId = "com.example.smart_dental_care_system"
 
-        // رفع الـ minSdk ضروري لعمل الـ Desugaring و Firebase
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

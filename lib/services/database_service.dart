@@ -86,35 +86,30 @@ class DatabaseService {
             'lastUpdate': FieldValue.serverTimestamp(),
           }
         }
-      }, SetOptions(merge: true)); // merge: true عشان يحافظ على باقي السنان وميمسحهاش
+      }, SetOptions(merge: true)); 
     } catch (e) {
       print("Error updating tooth: $e");
     }
   }
 
-  // جلب بيانات السنان للمريض بشكل لحظي
   Stream<DocumentSnapshot> getTeethStream(String patientId) {
     return db.collection('patients').doc(patientId).snapshots();
   }
-  // جلب داتا المواعيد بشكل لحظي
   Stream<QuerySnapshot> getAppointmentsStream() {
     return db.collection('appointments').snapshots();
   }
 
-// جلب المراجعات (التقييمات) بشكل لحظي
   Stream<QuerySnapshot> getAllReviewsStream() {
     return db.collection('reviews').orderBy('createdAt', descending: true).snapshots();
   }
 
-// جلب حالات الطوارئ (لو عندك كوليكشن طوارئ منفصل)
   Stream<QuerySnapshot> getEmergenciesStream() {
     return db.collection('emergencies').snapshots();
   }
-  // في DatabaseService
   Stream<QuerySnapshot> getDoctorReviews(String doctorId) {
     return db
         .collection('reviews')
-        .where('doctorId', isEqualTo: doctorId) // تصفية حسب الدكتور
+        .where('doctorId', isEqualTo: doctorId)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }

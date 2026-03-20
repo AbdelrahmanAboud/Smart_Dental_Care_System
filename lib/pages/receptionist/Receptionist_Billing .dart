@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'package:smart_dental_care_system/data/receptionistModels/Invoice_Model.dart';
+import 'package:smart_dental_care_system/main.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Billing extends StatefulWidget {
@@ -16,61 +20,99 @@ class Billing extends StatefulWidget {
 }
 
 class _BillingState extends State<Billing> {
-  final Stream<QuerySnapshot> _invoicesStream =
-  FirebaseFirestore.instance.collection('invoices').snapshots();
+  final Stream<QuerySnapshot> _invoicesStream = FirebaseFirestore.instance
+      .collection('invoices')
+      .snapshots();
 
-  // --- 1. إرسال إيميل احترافي (يفرق بين مدفوع ومعلق) ---
-  Future<void> _fetchAndSendEmail(InvoiceModel invoice) async {
-    try {
-      var userDoc = await FirebaseFirestore.instance.collection('users').doc(invoice.patientId).get();
-      String? patientEmail = userDoc.data()?['email'];
+  Future<void> sendInvoiceEmail({
+    required String patientEmail,
+    required dynamic invoice,
+  }) async {
+    final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
 
-      if (patientEmail == null || patientEmail.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Email not found for this patient")));
-        return;
+    String servicesHtmlRows = "";
+
+    if (invoice.services != null && invoice.services is List) {
+      for (var service in invoice.services) {
+        String name = "Service";
+        String price = "0";
+
+        try {
+          if (service is Map) {
+            name = service['serviceName']?.toString() ?? "Service";
+
+            var rawPrice = service['price'];
+            if (rawPrice is num) {
+              price = rawPrice.toStringAsFixed(2);
+            } else if (rawPrice is String) {
+              price = rawPrice;
+            } else {
+              price = "0.00";
+            }
+          } else {
+            name = service.serviceName?.toString() ?? "Service";
+
+            var rawPrice = service.price;
+            if (rawPrice is num) {
+              price = rawPrice.toStringAsFixed(2);
+            } else if (rawPrice is String) {
+              price = rawPrice;
+            } else {
+              price = "0.00";
+            }
+          }
+        } catch (e) {
+          name = service.toString();
+          price = "0.00";
+        }
+
+        servicesHtmlRows +=
+            """
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eeeeee; color: #555; font-family: Arial, sans-serif;">$name</td>
+        <td align="right" style="padding: 12px; border-bottom: 1px solid #eeeeee; color: #0077b6; font-weight: bold; font-family: Arial, sans-serif;">\$$price</td>
+      </tr>
+      """;
       }
+    }
 
-      bool isPaid = invoice.status.toLowerCase() == "paid";
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'origin': 'http://localhost',
+        },
+        body: json.encode({
+          'service_id': 'service_u1rzxxn',
+          'template_id': 'template_c2qd4ol',
+          'user_id': 'J3QBUJ9LUs-OEmcLk',
+          'template_params': {
+            'user_email': patientEmail,
+            'patient_name': invoice.patientName ?? "Patient",
+            'status': (invoice.status ?? "Paid").toUpperCase(),
+            'total_amount': invoice.totalAmount?.toString() ?? "0",
 
-      // تنسيق محتوى الإيميل بناءً على الحالة
-      final String subject = Uri.encodeComponent(isPaid
-          ? "Payment Receipt - Smart Dental Care"
-          : "Invoice Due - Smart Dental Care");
+            'services_table': servicesHtmlRows,
 
-      final String statusHeader = isPaid
-          ? "CONFIRMED RECEIPT"
-          : "OUTSTANDING INVOICE";
+            'payment_method': invoice.paymentMethod ?? "Cash",
+            'date': invoice.date ?? "Today",
+          },
+        }),
+      );
 
-      final String paymentInfo = isPaid
-          ? "Payment Method: ${invoice.paymentMethod}\nStatus: PAID"
-          : "Status: PENDING PAYMENT";
-
-      final String body = Uri.encodeComponent(
-          "--- $statusHeader ---\n\n"
-              "Dear ${invoice.patientName},\n\n"
-              "${isPaid ? 'Thank you for your payment.' : 'This is a reminder of your current invoice.'}\n\n"
-              "Details:\n"
-              "--------------------------\n"
-              "Services: ${invoice.services.join(', ')}\n"
-              "Total Amount: \$${invoice.totalAmount}\n"
-              "$paymentInfo\n"
-              "Date: ${invoice.date}\n"
-              "--------------------------\n\n"
-              "If you have any questions, please contact us.\n"
-              "Best regards,\n"
-              "Smart Dental Care Team");
-
-      final Uri emailUri = Uri.parse("mailto:$patientEmail?subject=$subject&body=$body");
-
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
+      if (response.statusCode == 200) {
+        print(
+          '✅ مبروك يا عبود.. الفاتورة اتبعتت والأسعار هتظهر مظبوطة إن شاء الله',
+        );
+      } else {
+        print('❌ فشل الإرسال: ${response.body}');
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error opening email app")));
+      print('Exception Error: $e');
     }
   }
 
-  // --- 2. نافذة بيانات الكارت ---
   void _showCardPaymentDialog(String invoiceId) {
     final TextEditingController cardNum = TextEditingController();
     final TextEditingController cardExpiry = TextEditingController();
@@ -81,75 +123,135 @@ class _BillingState extends State<Billing> {
       builder: (context) => AlertDialog(
         backgroundColor: Billing.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text("Enter Card Details", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Enter Card Details",
+          style: TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: cardNum, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("Card Number"), keyboardType: TextInputType.number),
+            TextField(
+              controller: cardNum,
+              style: const TextStyle(color: Colors.white),
+              decoration: _inputDecoration("Card Number"),
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: TextField(controller: cardExpiry, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("MM/YY"), keyboardType: TextInputType.datetime)),
+                Expanded(
+                  child: TextField(
+                    controller: cardExpiry,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration("MM/YY"),
+                    keyboardType: TextInputType.datetime,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: TextField(controller: cardCVV, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("CVV"), keyboardType: TextInputType.number, obscureText: true)),
+                Expanded(
+                  child: TextField(
+                    controller: cardCVV,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration("CVV"),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                  ),
+                ),
               ],
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Billing.primaryBlue),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Billing.primaryBlue,
+            ),
             onPressed: () async {
               if (cardNum.text.isNotEmpty) {
-                await FirebaseFirestore.instance.collection('invoices').doc(invoiceId).update({
-                  'status': 'Paid',
-                  'paymentMethod': 'Card',
-                });
+                await FirebaseFirestore.instance
+                    .collection('invoices')
+                    .doc(invoiceId)
+                    .update({'status': 'Paid', 'paymentMethod': 'Card'});
                 Navigator.pop(context);
                 Navigator.pop(context);
               }
             },
             child: const Text("Confirm Pay"),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // --- 3. خيارات الدفع ---
   void _showPaymentOptions(String invoiceId) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Billing.cardColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Select Payment Method", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Select Payment Method",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 15),
             _methodTile(Icons.payments, "Cash", Colors.green, () async {
-              await FirebaseFirestore.instance.collection('invoices').doc(invoiceId).update({'status': 'Paid', 'paymentMethod': 'Cash'});
+              await FirebaseFirestore.instance
+                  .collection('invoices')
+                  .doc(invoiceId)
+                  .update({'status': 'Paid', 'paymentMethod': 'Cash'});
               Navigator.pop(context);
             }),
-            _methodTile(Icons.credit_card, "Card", Colors.blue, () => _showCardPaymentDialog(invoiceId)),
-            _methodTile(Icons.qr_code_2, "QR Code", Colors.purpleAccent, () async {
-              await FirebaseFirestore.instance.collection('invoices').doc(invoiceId).update({'status': 'Paid', 'paymentMethod': 'QR'});
-              Navigator.pop(context);
-            }),
+            _methodTile(
+              Icons.credit_card,
+              "Card",
+              Colors.blue,
+              () => _showCardPaymentDialog(invoiceId),
+            ),
+            _methodTile(
+              Icons.qr_code_2,
+              "QR Code",
+              Colors.purpleAccent,
+              () async {
+                await FirebaseFirestore.instance
+                    .collection('invoices')
+                    .doc(invoiceId)
+                    .update({'status': 'Paid', 'paymentMethod': 'QR'});
+                Navigator.pop(context);
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _methodTile(IconData icon, String method, Color color, VoidCallback onTap) {
-    return ListTile(leading: Icon(icon, color: color), title: Text(method, style: const TextStyle(color: Colors.white)), onTap: onTap);
+  Widget _methodTile(
+    IconData icon,
+    String method,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(method, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
+    );
   }
 
-  // --- 4. نافذة إنشاء فاتورة ---
   void _showGenerateInvoiceDialog() {
     String? selectedPatient;
     String? selectedPatientId;
@@ -161,11 +263,22 @@ class _BillingState extends State<Billing> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
-          double currentTotal = tempServices.fold(0, (sum, item) => sum + item['price']);
+          double currentTotal = tempServices.fold(
+            0,
+            (sum, item) => sum + item['price'],
+          );
           return AlertDialog(
             backgroundColor: Billing.cardColor,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text("Create New Invoice", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Create New Invoice",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.9,
               child: SingleChildScrollView(
@@ -173,18 +286,31 @@ class _BillingState extends State<Billing> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'Patient').snapshots(),
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('role', isEqualTo: 'Patient')
+                          .snapshots(),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData) return const CircularProgressIndicator();
+                        if (!snapshot.hasData)
+                          return const CircularProgressIndicator();
                         var patients = snapshot.data!.docs;
                         return DropdownButtonFormField<String>(
                           dropdownColor: Billing.cardColor,
                           decoration: _inputDecoration("Select Patient"),
                           style: const TextStyle(color: Colors.white),
-                          items: patients.map((doc) => DropdownMenuItem(value: doc.id, child: Text(doc['name'] ?? "No Name"))).toList(),
+                          items: patients
+                              .map(
+                                (doc) => DropdownMenuItem(
+                                  value: doc.id,
+                                  child: Text(doc['name'] ?? "No Name"),
+                                ),
+                              )
+                              .toList(),
                           onChanged: (val) {
                             selectedPatientId = val;
-                            selectedPatient = patients.firstWhere((d) => d.id == val)['name'];
+                            selectedPatient = patients.firstWhere(
+                              (d) => d.id == val,
+                            )['name'];
                           },
                         );
                       },
@@ -192,37 +318,107 @@ class _BillingState extends State<Billing> {
                     const SizedBox(height: 15),
                     Row(
                       children: [
-                        Expanded(flex: 2, child: TextField(controller: serviceController, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("Service"))),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: serviceController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _inputDecoration("Service"),
+                          ),
+                        ),
                         const SizedBox(width: 8),
-                        Expanded(child: TextField(controller: priceController, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("Price"), keyboardType: TextInputType.number)),
-                        IconButton(icon: const Icon(Icons.add_circle, color: Billing.primaryBlue), onPressed: () {
-                          if (serviceController.text.isNotEmpty && priceController.text.isNotEmpty) {
-                            setDialogState(() {
-                              tempServices.add({'serviceName': serviceController.text, 'price': double.tryParse(priceController.text) ?? 0.0});
-                              serviceController.clear(); priceController.clear();
-                            });
-                          }
-                        })
+                        Expanded(
+                          child: TextField(
+                            controller: priceController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _inputDecoration("Price"),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.add_circle,
+                            color: Billing.primaryBlue,
+                          ),
+                          onPressed: () {
+                            if (serviceController.text.isNotEmpty &&
+                                priceController.text.isNotEmpty) {
+                              setDialogState(() {
+                                tempServices.add({
+                                  'serviceName': serviceController.text,
+                                  'price':
+                                      double.tryParse(priceController.text) ??
+                                      0.0,
+                                });
+                                serviceController.clear();
+                                priceController.clear();
+                              });
+                            }
+                          },
+                        ),
                       ],
                     ),
                     const Divider(color: Colors.white24, height: 30),
-                    ...tempServices.map((s) => ListTile(title: Text(s['serviceName'], style: const TextStyle(color: Colors.white70)), trailing: Text("\$${s['price']}", style: const TextStyle(color: Colors.white)))),
-                    Text("Total: \$${currentTotal.toStringAsFixed(2)}", style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ...tempServices.map(
+                      (s) => ListTile(
+                        title: Text(
+                          s['serviceName'],
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                        trailing: Text(
+                          "\$${s['price']}",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      "Total: \$${currentTotal.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-              ElevatedButton(onPressed: () async {
-                if (selectedPatientId != null && tempServices.isNotEmpty) {
-                  await FirebaseFirestore.instance.collection('invoices').add({
-                    'patientName': selectedPatient, 'patientId': selectedPatientId, 'status': 'pending', 'totalAmount': currentTotal,
-                    'paymentMethod': 'None', 'services': tempServices, 'timestamp': FieldValue.serverTimestamp(),
-                  });
-                  Navigator.pop(context);
-                }
-              }, child: const Text("Generate")),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(foregroundColor: Colors.white60),
+                child: const Text("Cancel"),
+              ),
+
+              ElevatedButton(
+                onPressed: () async {
+                  if (selectedPatientId != null && tempServices.isNotEmpty) {
+                    await FirebaseFirestore.instance
+                        .collection('invoices')
+                        .add({
+                          'patientName': selectedPatient,
+                          'patientId': selectedPatientId,
+                          'status': 'pending',
+                          'totalAmount': currentTotal,
+                          'paymentMethod': 'None',
+                          'services': tempServices,
+                          'timestamp': FieldValue.serverTimestamp(),
+                        });
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  "Generate",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           );
         },
@@ -234,8 +430,12 @@ class _BillingState extends State<Billing> {
     return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Billing.primaryBlue)),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.white24),
+      ),
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Billing.primaryBlue),
+      ),
     );
   }
 
@@ -243,17 +443,38 @@ class _BillingState extends State<Billing> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Billing.bgColor,
-      appBar: AppBar(backgroundColor: Billing.bgColor, title: const Text("Billing & Payments", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), elevation: 0),
+      appBar: AppBar(
+        backgroundColor: Billing.bgColor,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          "Billing & Payments",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _invoicesStream,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final invoices = snapshot.data!.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return InvoiceModel(
-              invoiceId: doc.id, patientId: data['patientId'] ?? '', patientName: data['patientName'] ?? 'Unknown',
-              status: data['status'] ?? 'pending', totalAmount: (data['totalAmount'] ?? 0).toDouble(),
-              paymentMethod: data['paymentMethod'] ?? 'None', services: (data['services'] as List?)?.map((s) => s['serviceName'].toString()).toList() ?? [], date: "Today",
+              invoiceId: doc.id,
+              patientId: data['patientId'] ?? '',
+              patientName: data['patientName'] ?? 'Unknown',
+              status: data['status'] ?? 'pending',
+              totalAmount: (data['totalAmount'] ?? 0).toDouble(),
+              paymentMethod: data['paymentMethod'] ?? 'None',
+              services:
+                  (data['services'] as List?)
+                      ?.map((s) => s as Map<String, dynamic>)
+                      .toList() ??
+                  [],
+              date: "Today",
             );
           }).toList();
 
@@ -277,13 +498,29 @@ class _BillingState extends State<Billing> {
   }
 
   Widget _buildNewInvoiceButton() {
-    return SizedBox(width: double.infinity, height: 55, child: ElevatedButton(onPressed: _showGenerateInvoiceDialog, style: ElevatedButton.styleFrom(backgroundColor: Billing.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text("Generate New Invoice", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        onPressed: _showGenerateInvoiceDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Billing.primaryBlue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text(
+          "Generate New Invoice",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 
-  // --- ارجاع ديزاين الكارد القديم (الأفضل) ---
   Widget _buildInvoiceList(List<InvoiceModel> invoices) {
     return ListView.builder(
-      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: invoices.length,
       itemBuilder: (context, index) => _buildInvoiceListItem(invoices[index]),
     );
@@ -303,29 +540,113 @@ class _BillingState extends State<Billing> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(invoice.patientName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                Text(
+                  invoice.patientName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: getStatusColor(invoice.status).withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                  child: Text(invoice.status.toUpperCase(), style: TextStyle(color: getStatusColor(invoice.status), fontSize: 11, fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: getStatusColor(invoice.status).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    invoice.status.toUpperCase(),
+                    style: TextStyle(
+                      color: getStatusColor(invoice.status),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(invoice.services.join(", "), style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            Text(
+              invoice.services
+                  .map((s) => s['serviceName'] ?? 'Service')
+                  .join(", "),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
             const Divider(color: Colors.white10, height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("\$${invoice.totalAmount}", style: const TextStyle(color: Billing.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  "\$${invoice.totalAmount}",
+                  style: const TextStyle(
+                    color: Billing.primaryBlue,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.email_outlined, color: Colors.white70), onPressed: () => _fetchAndSendEmail(invoice)),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.email_outlined,
+                        color: Colors.blue,
+                      ),
+                      onPressed: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Processing...'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+
+                        try {
+                          var userDoc = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(invoice.patientId)
+                              .get();
+
+                          String? patientEmail = userDoc.data()?['email'];
+
+                          if (patientEmail == null || patientEmail.isEmpty) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Email not found")),
+                            );
+                            return;
+                          }
+
+                          await sendInvoiceEmail(
+                            patientEmail: patientEmail,
+                            invoice: invoice,
+                          );
+
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Invoice sent successfully!'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        }
+                      },
+                    ),
                     if (isPending)
                       ElevatedButton(
                         onPressed: () => _showPaymentOptions(invoice.invoiceId),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white10),
-                        child: const Text("Pay", style: TextStyle(color: Billing.primaryBlue)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white10,
+                        ),
+                        child: const Text(
+                          "Pay",
+                          style: TextStyle(color: Billing.primaryBlue),
+                        ),
                       ),
                   ],
                 ),
@@ -340,7 +661,10 @@ class _BillingState extends State<Billing> {
   Widget _buildPaymentSummary(List<InvoiceModel> invoices) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Billing.cardColor, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        color: Billing.cardColor,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         children: [
           const Text(
@@ -353,16 +677,41 @@ class _BillingState extends State<Billing> {
             ),
           ),
           const SizedBox(height: 15),
-          // --------------------
-          SummaryRow(label: "Cash Payments", value: calculateByMethod(invoices, "Cash"), color: Colors.greenAccent),
-          SummaryRow(label: "Card Payments", value: calculateByMethod(invoices, "Card"), color: Colors.blueAccent),
-          SummaryRow(label: "QR Payments", value: calculateByMethod(invoices, "QR"), color: Colors.purpleAccent),
+          SummaryRow(
+            label: "Cash Payments",
+            value: calculateByMethod(invoices, "Cash"),
+            color: Colors.greenAccent,
+          ),
+          SummaryRow(
+            label: "Card Payments",
+            value: calculateByMethod(invoices, "Card"),
+            color: Colors.blueAccent,
+          ),
+          SummaryRow(
+            label: "QR Payments",
+            value: calculateByMethod(invoices, "QR"),
+            color: Colors.purpleAccent,
+          ),
           const Divider(color: Colors.white10, height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Total Revenue", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text("\$${calculateTodayRevenue(invoices).toStringAsFixed(0)}", style: const TextStyle(color: Colors.greenAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                "Total Revenue",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                "\$${calculateTodayRevenue(invoices).toStringAsFixed(0)}",
+                style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],
@@ -373,41 +722,111 @@ class _BillingState extends State<Billing> {
   Widget _buildStatsCards(List<InvoiceModel> invoices) {
     return Row(
       children: [
-        Expanded(child: BillingCard(icon: Icons.attach_money, iconColor: Colors.green, value: "\$${calculateTodayRevenue(invoices).toStringAsFixed(0)}", title: "Total Paid")),
+        Expanded(
+          child: BillingCard(
+            icon: Icons.attach_money,
+            iconColor: Colors.green,
+            value: "\$${calculateTodayRevenue(invoices).toStringAsFixed(0)}",
+            title: "Total Paid",
+          ),
+        ),
         const SizedBox(width: 14),
-        Expanded(child: BillingCard(icon: Icons.timer, iconColor: Colors.orange, value: "\$${calculatePending(invoices).toStringAsFixed(0)}", title: "Total Pending")),
+        Expanded(
+          child: BillingCard(
+            icon: Icons.timer,
+            iconColor: Colors.orange,
+            value: "\$${calculatePending(invoices).toStringAsFixed(0)}",
+            title: "Total Pending",
+          ),
+        ),
       ],
     );
   }
 }
 
-// --- المساعدات ---
-double calculateTodayRevenue(List<InvoiceModel> invoices) => invoices.where((inv) => inv.status.toLowerCase() == "paid").fold(0.0, (sum, item) => sum + item.totalAmount);
-double calculatePending(List<InvoiceModel> invoices) => invoices.where((inv) => inv.status.toLowerCase() == "pending").fold(0.0, (sum, item) => sum + item.totalAmount);
-double calculateByMethod(List<InvoiceModel> invoices, String method) => invoices.where((inv) => inv.status.toLowerCase() == "paid" && inv.paymentMethod == method).fold(0.0, (sum, item) => sum + item.totalAmount);
-Color getStatusColor(String status) => status.toLowerCase() == 'paid' ? Colors.green : Colors.orange;
+double calculateTodayRevenue(List<InvoiceModel> invoices) => invoices
+    .where((inv) => inv.status.toLowerCase() == "paid")
+    .fold(0.0, (sum, item) => sum + item.totalAmount);
+double calculatePending(List<InvoiceModel> invoices) => invoices
+    .where((inv) => inv.status.toLowerCase() == "pending")
+    .fold(0.0, (sum, item) => sum + item.totalAmount);
+double calculateByMethod(List<InvoiceModel> invoices, String method) => invoices
+    .where(
+      (inv) =>
+          inv.status.toLowerCase() == "paid" && inv.paymentMethod == method,
+    )
+    .fold(0.0, (sum, item) => sum + item.totalAmount);
+Color getStatusColor(String status) =>
+    status.toLowerCase() == 'paid' ? Colors.green : Colors.orange;
 
 class BillingCard extends StatelessWidget {
-  final IconData icon; final Color iconColor; final String value; final String title;
-  const BillingCard({super.key, required this.icon, required this.iconColor, required this.value, required this.title});
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String title;
+  const BillingCard({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.title,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(color: Color(0xFF0F2235), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-      child: Column(children: [Icon(icon, color: iconColor, size: 28), const SizedBox(height: 10), Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)), Text(title, style: const TextStyle(color: Colors.white38, fontSize: 12))]),
+      decoration: BoxDecoration(
+        color: Color(0xFF0F2235),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: iconColor, size: 28),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class SummaryRow extends StatelessWidget {
-  final String label; final double value; final Color color;
-  const SummaryRow({super.key, required this.label, required this.value, required this.color});
+  final String label;
+  final double value;
+  final Color color;
+  const SummaryRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: const TextStyle(color: Colors.white70)), Text("\$${value.toStringAsFixed(0)}", style: TextStyle(color: color, fontWeight: FontWeight.bold))]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(
+            "\$${value.toStringAsFixed(0)}",
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -14,47 +14,45 @@ class _AssessmentSurveyState extends State<AssessmentSurvey> {
   final Color cardColor = const Color(0xFF112B3C);
   final Color primaryBlue = const Color(0xFF2EC4FF);
 
-  // قائمة الأسئلة وتأثير كل سؤال على المخاطر
   final List<Map<String, dynamic>> questions = [
     {
       "question": "Do you feel pain with cold or hot drinks?",
-      "riskType": "enamel", // يؤثر على صحة المينا
+      "riskType": "enamel",
       "value": 20,
-      "answer": false
+      "answer": false,
     },
     {
       "question": "Do your gums bleed when you brush?",
-      "riskType": "gum", // يؤثر على أمراض اللثة
+      "riskType": "gum",
       "value": 25,
-      "answer": false
+      "answer": false,
     },
     {
       "question": "Do you see any visible dark spots on your teeth?",
-      "riskType": "cavity", // يؤثر على التسوس
+      "riskType": "cavity",
       "value": 30,
-      "answer": false
+      "answer": false,
     },
     {
       "question": "Do you brush your teeth at least twice a day?",
-      "riskType": "hygiene", // يؤثر على النظافة الشخصية (إيجابي)
+      "riskType": "hygiene",
       "value": 40,
-      "answer": false
+      "answer": false,
     },
     {
       "question": "Do you use dental floss daily?",
       "riskType": "hygiene",
       "value": 30,
-      "answer": false
+      "answer": false,
     },
   ];
 
   bool isSaving = false;
 
-  // دالة الحساب وحفظ البيانات في Firestore
   Future<void> _calculateAndSave() async {
     setState(() => isSaving = true);
 
-    int cavityRisk = 10; // قيم أساسية (Minimum)
+    int cavityRisk = 10;
     int gumRisk = 15;
     int enamelRisk = 10;
     int hygieneScore = 30;
@@ -68,7 +66,6 @@ class _AssessmentSurveyState extends State<AssessmentSurvey> {
       }
     }
 
-    // معادلة الـ Score العام (عكس متوسط المخاطر)
     int totalRisk = (cavityRisk + gumRisk + enamelRisk) ~/ 3;
     int finalScore = (100 - totalRisk + (hygieneScore ~/ 2)).clamp(0, 100);
 
@@ -81,16 +78,16 @@ class _AssessmentSurveyState extends State<AssessmentSurvey> {
           'gumRisk': gumRisk.clamp(0, 100),
           'enamelRisk': enamelRisk.clamp(0, 100),
           'hygieneScore': hygieneScore.clamp(0, 100),
-          'monthlyImprovement': 5, // قيمة افتراضية للتحسن
+          'monthlyImprovement': 5,
           'lastAssessment': FieldValue.serverTimestamp(),
-        }
+        },
       });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Oral Score Updated Successfully!")),
       );
-      Navigator.pop(context); // العودة للصفحة السابقة
+      Navigator.pop(context);
     } catch (e) {
       debugPrint("Update Error: $e");
     } finally {
@@ -104,7 +101,10 @@ class _AssessmentSurveyState extends State<AssessmentSurvey> {
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
-        title: const Text("AI Oral Assessment", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "AI Oral Assessment",
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -113,57 +113,68 @@ class _AssessmentSurveyState extends State<AssessmentSurvey> {
       body: isSaving
           ? Center(child: CircularProgressIndicator(color: primaryBlue))
           : Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: questions.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          questions[index]['question'],
-                          style: const TextStyle(color: Colors.white, fontSize: 15),
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: questions.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(15),
                         ),
-                      ),
-                      Switch(
-                        value: questions[index]['answer'],
-                        activeColor: primaryBlue,
-                        onChanged: (val) {
-                          setState(() => questions[index]['answer'] = val);
-                        },
-                      ),
-                    ],
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                questions[index]['question'],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            Switch(
+                              value: questions[index]['answer'],
+                              activeColor: primaryBlue,
+                              onChanged: (val) {
+                                setState(
+                                  () => questions[index]['answer'] = val,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      minimumSize: const Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    onPressed: _calculateAndSave,
+                    child: const Text(
+                      "Generate My Score",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
-              onPressed: _calculateAndSave,
-              child: const Text(
-                "Generate My Score",
-                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

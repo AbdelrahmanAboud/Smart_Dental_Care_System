@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -18,10 +19,24 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
   List<String> availableSlots = [];
   final TextEditingController _slotController = TextEditingController();
 
+  String get currentDoctorId =>
+      FirebaseAuth.instance.currentUser?.uid ?? "unknown_doctor";
+
   @override
   void dispose() {
     _slotController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _deleteOldSlotsFromDatabase();
+  }
+
+  String _generateDocId(DateTime date) {
+    String dateKey = DateFormat('yyyy-MM-dd').format(date);
+    return "${currentDoctorId}_$dateKey";
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -32,9 +47,9 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
         return Theme(
           data: ThemeData.dark().copyWith(
             colorScheme: ColorScheme.dark(
-              primary: primaryBlue, 
+              primary: primaryBlue,
               onPrimary: Colors.black,
-              surface: cardColor, 
+              surface: cardColor,
               onSurface: Colors.white,
             ),
             dialogBackgroundColor: bgColor,
@@ -52,10 +67,10 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
   }
 
   Future<void> _loadSlotsForDate(DateTime date) async {
-    final dateKey = DateFormat('yyyy-MM-dd').format(date);
+    final docId = _generateDocId(date);
     final doc = await FirebaseFirestore.instance
         .collection('available_slots')
-        .doc(dateKey)
+        .doc(docId)
         .get();
 
     if (doc.exists) {
@@ -78,37 +93,39 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
       return;
     }
     if (selectedDay == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a date")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please select a date")));
       return;
     }
 
-    final dateKey = DateFormat('yyyy-MM-dd').format(selectedDay!);
+    final docId = _generateDocId(selectedDay!);
     final slot = _slotController.text.trim();
 
     if (availableSlots.contains(slot)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("This slot already exists")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("This slot already exists")));
       return;
     }
 
     try {
       await FirebaseFirestore.instance
           .collection('available_slots')
-          .doc(dateKey)
+          .doc(docId)
           .set({
-        'date': Timestamp.fromDate(selectedDay!),
-        'slots': FieldValue.arrayUnion([slot]),
-      }, SetOptions(merge: true));
+            'date': Timestamp.fromDate(selectedDay!),
+            'doctorId': currentDoctorId,
+            'slots': FieldValue.arrayUnion([slot]),
+          }, SetOptions(merge: true));
 
       _slotController.clear();
       _loadSlotsForDate(selectedDay!);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Slot added successfully"),
-            backgroundColor: Colors.green),
+          content: Text("Slot added successfully"),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,25 +136,47 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
 
   Future<void> _deleteSlot(String slot) async {
     if (selectedDay == null) return;
-    final dateKey = DateFormat('yyyy-MM-dd').format(selectedDay!);
+    final docId = _generateDocId(selectedDay!);
 
     try {
       await FirebaseFirestore.instance
           .collection('available_slots')
-          .doc(dateKey)
+          .doc(docId)
           .update({
-        'slots': FieldValue.arrayRemove([slot]),
-      });
+            'slots': FieldValue.arrayRemove([slot]),
+          });
 
       _loadSlotsForDate(selectedDay!);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("Slot deleted"), backgroundColor: Colors.green),
+          content: Text("Slot deleted"),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
       );
+    }
+  }
+
+  Future<void> _deleteOldSlotsFromDatabase() async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime todayStart = DateTime(now.year, now.month, now.day);
+
+      var snapshot = await FirebaseFirestore.instance
+          .collection('available_slots')
+          .where('doctorId', isEqualTo: currentDoctorId)
+          .where('date', isLessThan: Timestamp.fromDate(todayStart))
+          .get();
+
+      for (var doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+      print("Old slots cleaned up successfully.");
+    } catch (e) {
+      print("Error cleaning up old slots: $e");
     }
   }
 
@@ -153,7 +192,7 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Manage Available Slots",
+          "Manage Your Slots",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
       ),
@@ -204,11 +243,15 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
                 headerStyle: HeaderStyle(
                   formatButtonVisible: false,
                   titleCentered: true,
-                  titleTextStyle:
-                      const TextStyle(color: Colors.white, fontSize: 16),
+                  titleTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
                   leftChevronIcon: Icon(Icons.chevron_left, color: primaryBlue),
-                  rightChevronIcon:
-                      Icon(Icons.chevron_right, color: primaryBlue),
+                  rightChevronIcon: Icon(
+                    Icons.chevron_right,
+                    color: primaryBlue,
+                  ),
                 ),
               ),
             ),
@@ -229,7 +272,7 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
                     child: TextField(
                       controller: _slotController,
                       readOnly: true,
-                      onTap: () => _selectTime(context), 
+                      onTap: () => _selectTime(context),
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: "Click to select time",
@@ -254,14 +297,20 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryBlue,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 15),
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text("Add",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Add",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -283,7 +332,9 @@ class _DoctorAvailableSlotsState extends State<DoctorAvailableSlots> {
                   children: availableSlots.map((slot) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 10),
+                        horizontal: 15,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: cardColor,
                         borderRadius: BorderRadius.circular(10),

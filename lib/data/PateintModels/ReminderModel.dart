@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ReminderModel {
-  final String id; // الـ ID في فايربيز بيكون String
+  final String id;
   final String title;
   final String description;
-  final DateTime scheduledTime; // تحويل الـ Timestamp لـ DateTime
+  final DateTime scheduledTime; 
   final String iconType;
   final bool isDone;
 
@@ -17,7 +17,6 @@ class ReminderModel {
     required this.isDone,
   });
 
-  // فانكشن لتحويل البيانات من Firebase (Map) إلى Model
   factory ReminderModel.fromMap(String docId, Map<String, dynamic> map) {
     return ReminderModel(
       id: docId,

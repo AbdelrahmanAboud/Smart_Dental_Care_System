@@ -27,7 +27,6 @@ class _PatientFeedbackState extends State<PatientFeedback> {
     final String currentPatientUid = FirebaseAuth.instance.currentUser!.uid;
     final User? currentUser = FirebaseAuth.instance.currentUser;
 
-    // اطبعه هنا عشان تشوفه في الـ Debug Console
     print("DEBUG: Current User UID is -> $currentPatientUid");
     return Scaffold(
       backgroundColor: bgColor,
@@ -38,7 +37,10 @@ class _PatientFeedbackState extends State<PatientFeedback> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Feedback & Rating", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Feedback & Rating",
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -47,29 +49,33 @@ class _PatientFeedbackState extends State<PatientFeedback> {
           children: [
             const Text(
               "Select Doctor from your Treatments",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
 
-            // --- جلب الدكاترة بناءً على سجلات المريض في appointments ---
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('patient_treatments') // تأكد من مطابقة الاسم هنا
+                  .collection('appointments')
                   .where('patientId', isEqualTo: currentPatientUid)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const LinearProgressIndicator();
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return const LinearProgressIndicator();
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Text("No treatment history found in patient_treatments.");
+                  return const Text(
+                    "No treatment history found in patient_treatments.",
+                  );
                 }
 
                 Map<String, String> doctorMap = {};
                 for (var doc in snapshot.data!.docs) {
                   final data = doc.data() as Map<String, dynamic>;
 
-                  // ملاحظة هامة: إذا كان displayName فارغاً في Firebase Auth،
-                  // يفضل جلب الاسم من كولكشن users كما فعلنا سابقاً.
                   String? dId = data['doctorId'];
                   String? dName = data['doctorName'] ?? "Doctor";
 
@@ -78,40 +84,44 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                   }
                 }
 
-                // ... كود الـ Dropdown المنتهي بـ items: doctorMap.entries.map ...
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(14)
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       dropdownColor: cardColor,
-                      hint: const Text("Select your doctor", style: TextStyle(color: Colors.white54)),
+                      hint: const Text(
+                        "Select your doctor",
+                        style: TextStyle(color: Colors.white54),
+                      ),
                       value: selectedDoctorId,
                       isExpanded: true,
                       items: doctorMap.entries.map((entry) {
                         return DropdownMenuItem<String>(
                           value: entry.key,
-                          child: Text(entry.value, style: const TextStyle(color: Colors.white)),
+                          child: Text(
+                            entry.value,
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) async {
                         setState(() {
                           selectedDoctorId = val;
-                          // هنا بنضيف السابقة قبل تخزين الاسم في المتغير
                           selectedDoctorName = "Dr. ${doctorMap[val]}";
                         });
 
-                        // جلب البيانات بناءً على هيكلية الصورة (id, name, role)
-                        var drDoc = await FirebaseFirestore.instance.collection('users').doc(val).get();
+                        var drDoc = await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(val)
+                            .get();
                         if (drDoc.exists) {
                           final drData = drDoc.data()!;
                           setState(() {
-                            // استخدم 'role' بدلاً من 'specialization' بناءً على الصورة
                             selectedDoctorRole = drData['role'] ?? "Doctor";
-                            // تأكد من وجود حقل 'profileImage' في الداتابيز أو استخدم افتراضي
                             selectedDoctorImage = drData['profileImage'] ?? "";
                           });
                         }
@@ -123,44 +133,17 @@ class _PatientFeedbackState extends State<PatientFeedback> {
             ),
             const SizedBox(height: 25),
 
-            if (selectedDoctorId != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.green.withOpacity(0.5)),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: selectedDoctorImage != null && selectedDoctorImage!.isNotEmpty
-                          ? NetworkImage(selectedDoctorImage!)
-                          : const AssetImage("lib/assets/doctor.jpeg") as ImageProvider,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(selectedDoctorName!, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                          const Text("Verified Treatment Access", style: TextStyle(color: Colors.green, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 30),
-
-            // --- قسم التقييم بالنجوم ---
             Center(
               child: Column(
                 children: [
-                  const Text("Rate Your Experience", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                  const Text(
+                    "Rate Your Experience",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -169,7 +152,13 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                         onTap: () => setState(() => selectedRating = index + 1),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Icon(index < selectedRating ? Icons.star : Icons.star_border, color: Colors.amber, size: 40),
+                          child: Icon(
+                            index < selectedRating
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: Colors.amber,
+                            size: 40,
+                          ),
                         ),
                       );
                     }),
@@ -180,12 +169,21 @@ class _PatientFeedbackState extends State<PatientFeedback> {
 
             const SizedBox(height: 30),
 
-            // --- قسم التعليقات ---
-            const Text("Your Comments", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+            const Text(
+              "Your Comments",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 15),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: TextField(
                 controller: _commentController,
                 maxLines: 4,
@@ -209,7 +207,9 @@ class _PatientFeedbackState extends State<PatientFeedback> {
             SizedBox(height: 10),
 
             StreamBuilder<QuerySnapshot>(
-              stream: DatabaseService().getMyReviews(FirebaseAuth.instance.currentUser!.uid),
+              stream: DatabaseService().getMyReviews(
+                FirebaseAuth.instance.currentUser!.uid,
+              ),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Center(
@@ -243,20 +243,21 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: reviews.length,
                   itemBuilder: (context, index) {
-                    final data = reviews[index].data() as Map<String, dynamic>? ?? {};
+                    final data =
+                        reviews[index].data() as Map<String, dynamic>? ?? {};
 
-                    // التعامل مع البيانات بأمان
                     final String doctorName = data['doctorName'] ?? "Anonymous";
                     final double rating = (data['rating'] != null)
                         ? (data['rating'] as num).toDouble()
                         : 0.0;
                     final String comment = data['comment'] ?? "";
-                    final DateTime date = (data['createdAt'] != null && data['createdAt'] is Timestamp)
+                    final DateTime date =
+                        (data['createdAt'] != null &&
+                            data['createdAt'] is Timestamp)
                         ? (data['createdAt'] as Timestamp).toDate()
                         : DateTime.now();
-                    final String formattedDate = "${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}";
-
-
+                    final String formattedDate =
+                        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -306,7 +307,7 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                               Row(
                                 children: List.generate(
                                   5,
-                                      (i) => Icon(
+                                  (i) => Icon(
                                     i < rating ? Icons.star : Icons.star_border,
                                     size: 16,
                                     color: Colors.amber,
@@ -326,7 +327,7 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                   },
                 );
               },
-            )
+            ),
           ],
         ),
       ),
@@ -337,11 +338,17 @@ class _PatientFeedbackState extends State<PatientFeedback> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
             ),
             onPressed: () async {
               if (selectedDoctorId == null || selectedRating == 0) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please select a doctor and rating!")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Please select a doctor and rating!"),
+                  ),
+                );
                 return;
               }
               String? realpatientName;
@@ -352,24 +359,31 @@ class _PatientFeedbackState extends State<PatientFeedback> {
                     .get();
 
                 if (patientDoc.exists) {
-                  realpatientName = patientDoc.data()?['name']; // جلب الحقل اللي اسمه name
+                  realpatientName = patientDoc.data()?['name'];
                 }
               } catch (e) {
                 debugPrint("Error fetching doctor name: $e");
               }
-              // إرسال التقييم
               await DatabaseService().addReview(
                 patientId: currentPatientUid,
-                patientName: realpatientName ?? currentUser!.displayName ?? "Anonymous",
+                patientName:
+                    realpatientName ?? currentUser!.displayName ?? "Anonymous",
                 doctorId: selectedDoctorId!,
                 doctorName: selectedDoctorName!,
                 rating: selectedRating,
                 comment: _commentController.text,
               );
 
-              Navigator.pop(context); // العودة بعد الإرسال
+              Navigator.pop(context);
             },
-            child: const Text('Submit Feedback', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Submit Feedback',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ),

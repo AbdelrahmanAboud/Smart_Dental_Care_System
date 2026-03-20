@@ -24,7 +24,6 @@ class PatientModel {
   });
 
   factory PatientModel.fromMap(Map<String, dynamic> map, String documentId) {
-    // دالة داخلية لتحويل الـ Timestamp لـ DateTime بأمان
     DateTime? parseDateTime(dynamic value) {
       if (value is Timestamp) return value.toDate();
       return null;
@@ -36,11 +35,9 @@ class PatientModel {
       status: map['status'] ?? '',
       doctor: map['doctor'] ?? '',
       appointmentTime: map['appointmentTime'] ?? '',
-      // استخدام parseDateTime لكل حقول الوقت
       arrivedTime: parseDateTime(map['arrivedTime']),
       consultationStart: parseDateTime(map['startTime']),
       consultationEnd: parseDateTime(map['endTime']),
-      // تحويل التقييم لرقم عشري بأمان
       patientRating: (map['patientRating'] as num?)?.toDouble(),
     );
   }

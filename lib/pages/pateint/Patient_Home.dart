@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_dental_care_system/pages/doctor/Doctor_Dashboard.dart';
-import 'package:smart_dental_care_system/Globale.Data.dart';
 import 'package:smart_dental_care_system/pages/pateint/BookingPage.dart';
 import 'package:smart_dental_care_system/pages/pateint/Habit_Tracker.dart';
 import 'package:smart_dental_care_system/pages/pateint/Risk_Score.dart';
@@ -30,49 +29,21 @@ class _PatientHomeState extends State<PatientHome> {
     fetchData();
   }
 
- fetchData() async {
-  String uid = FirebaseAuth.instance.currentUser!.uid;
+  fetchData() async {
+    String uid = FirebaseAuth.instance.currentUser!.uid;
 
-  DocumentSnapshot doc = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
 
-  DocumentSnapshot apptDoc = await FirebaseFirestore.instance
-      .collection('appointments')
-      .doc(uid)
-      .get();
-
-  if (mounted) { // تأكد إن الـ Widget لسه موجودة في الـ memory
-    setState(() {
-      userData = doc.data() as Map<String, dynamic>?;
-
-      if (apptDoc.exists) {
-        hasBooking = true;
-        appointmentId = uid;
-        var data = apptDoc.data() as Map<String, dynamic>;
-        
-        DateTime? date;
-        // فحص نوع البيانات عشان نتجنب الـ Error
-        if (data['date'] is Timestamp) {
-          date = (data['date'] as Timestamp).toDate();
-        } else if (data['date'] is String) {
-          date = DateTime.tryParse(data['date']); // لو متخزن نص، بنحاول نحوله لـ DateTime
-        }
-
-        String slot = data['slot'] ?? "";
-        
-        if (date != null) {
-          appointmentInfo = "${DateFormat('EEEE, dd MMM').format(date)} at $slot";
-        } else {
-          appointmentInfo = "Date format error at $slot";
-        }
-      }
-
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        userData = doc.data() as Map<String, dynamic>?;
+        isLoading = false;
+      });
+    }
   }
-}
 
   final List<Map<String, dynamic>> quickAccessItems = [
     {"icon": FontAwesomeIcons.book, "title": "Book"},
@@ -85,22 +56,10 @@ class _PatientHomeState extends State<PatientHome> {
   bool hasBooking = false;
 
   void _handleBooking() async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => Bookingpage()),
     );
-
-    if (result != null && result is Map) {
-      setState(() {
-        DateTime selectedDate = result['selectedDate'];
-        String selectedSlot = result['selectedSlot'];
-        appointmentId = result['appointmentId'];
-        String formattedDate = DateFormat('EEEE, dd MMM').format(selectedDate);
-
-        appointmentInfo = "$formattedDate at $selectedSlot";
-        hasBooking = true;
-      });
-    }
   }
 
   @override
@@ -114,7 +73,7 @@ class _PatientHomeState extends State<PatientHome> {
         titleSpacing: 0,
 
         title: Padding(
-          padding:  EdgeInsets.only(left: 20.0),
+          padding: EdgeInsets.only(left: 20.0),
           child: Text(
             "Patient Home",
             style: TextStyle(
@@ -127,7 +86,6 @@ class _PatientHomeState extends State<PatientHome> {
 
         centerTitle: false,
         actions: [
-         
           Padding(
             padding: const EdgeInsets.only(right: 13.0),
             child: IconButton(
@@ -270,35 +228,46 @@ class _PatientHomeState extends State<PatientHome> {
                       ),
                       const SizedBox(height: 15),
 
-// الـ StreamBuilder هنا هو المتحكم الوحيد
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection('appointments')
-                            .where('patientId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+                            .where(
+                              'patientId',
+                              isEqualTo: FirebaseAuth.instance.currentUser!.uid,
+                            )
                             .limit(1)
                             .snapshots(),
                         builder: (context, snapshot) {
-                          // الحالة الأولى: لو مفيش حجز (الداتا فاضية)
-                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
                             return Center(
                               child: Column(
                                 children: [
-                                  const Icon(Icons.calendar_today_outlined, color: Colors.white24, size: 40),
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    color: Colors.white24,
+                                    size: 40,
+                                  ),
                                   const SizedBox(height: 10),
                                   const Text(
                                     "You haven't booked an appointment yet",
-                                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () => _handleBooking(),
-                                    child: Text("Book Now", style: TextStyle(color: primaryBlue)),
+                                    child: Text(
+                                      "Book Now",
+                                      style: TextStyle(color: primaryBlue),
+                                    ),
                                   ),
                                 ],
                               ),
                             );
                           }
 
-                          // الحالة الثانية: لو فيه حجز (بناخد بياناته ديناميكياً)
                           var doc = snapshot.data!.docs.first;
                           var data = doc.data() as Map<String, dynamic>;
 
@@ -310,7 +279,7 @@ class _PatientHomeState extends State<PatientHome> {
                           }
 
                           String slot = data['slot'] ?? "";
-                          String doctorName = data['doctorName'] ?? "Dr. Emily White";
+                          String doctorName = data['doctorName'] ?? "Unknown";
                           String status = data['status'] ?? "Pending";
 
                           String formattedDate = date != null
@@ -321,27 +290,42 @@ class _PatientHomeState extends State<PatientHome> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.calendar_month, color: Colors.white, size: 15),
+                                  const Icon(
+                                    Icons.calendar_month,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
                                   const SizedBox(width: 5),
-                                  Text(
-                                    "$formattedDate at $slot",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Text(
+                                      "$formattedDate at $slot",
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(width: 10),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: status == 'Accepted' ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                                      color: status == 'Accepted'
+                                          ? Colors.green.withOpacity(0.2)
+                                          : Colors.orange.withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       status.toUpperCase(),
                                       style: TextStyle(
-                                        color: status == 'Accepted' ? Colors.greenAccent : Colors.orangeAccent,
+                                        color: status == 'Accepted'
+                                            ? Colors.greenAccent
+                                            : Colors.orangeAccent,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -349,42 +333,68 @@ class _PatientHomeState extends State<PatientHome> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 20),
+
+                              SizedBox(height: 20),
                               Row(
                                 children: [
-                                  const CircleAvatar(
-                                    radius: 22,
-                                    backgroundImage: AssetImage("lib/assets/doctor.jpeg"),
+                                  Icon(
+                                    FontAwesomeIcons.userDoctor,
+                                    color: primaryBlue,
+                                    size: 30,
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text("Dr. $doctorName", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                      Text(
+                                        "Dr. $doctorName",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      const Text("Clinic Room 3", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                                      const Text(
+                                        "Clinic Room 3",
+                                        style: TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               Row(
                                 children: [
                                   Expanded(
                                     child: OutlinedButton(
                                       onPressed: () => _handleBooking(),
                                       style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Colors.white54),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        side: const BorderSide(
+                                          color: Colors.white54,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
-                                      child: const Text("Reschedule", style: TextStyle(color: Colors.white)),
+                                      child: const Text(
+                                        "Reschedule",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: OutlinedButton(
                                       onPressed: () async {
-                                        bool confirm = await _showCancelDialog(context);
+                                        bool confirm = await _showCancelDialog(
+                                          context,
+                                        );
                                         if (confirm) {
                                           await FirebaseFirestore.instance
                                               .collection('appointments')
@@ -393,10 +403,19 @@ class _PatientHomeState extends State<PatientHome> {
                                         }
                                       },
                                       style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Colors.red),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        side: const BorderSide(
+                                          color: Colors.red,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
-                                      child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+                                      child: const Text(
+                                        "Cancel",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -445,16 +464,16 @@ class _PatientHomeState extends State<PatientHome> {
               ),
             ),
 
-             SizedBox(height: 12),
+            SizedBox(height: 12),
 
             Padding(
-              padding:  EdgeInsets.only(left: 16.0, right: 16.0),
+              padding: EdgeInsets.only(left: 16.0, right: 16.0),
               child: Container(
                 width: double.infinity,
                 height: 55,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    backgroundColor:  Color(0xFF112B3C),
+                    backgroundColor: Color(0xFF112B3C),
                     side: const BorderSide(color: Color(0xFF00D2FF), width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
@@ -701,47 +720,60 @@ class _PatientHomeState extends State<PatientHome> {
       ),
     );
   }
-// ميثود إظهار رسالة تأكيد الإلغاء
+
   Future<bool> _showCancelDialog(BuildContext context) async {
     return await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Colors.white10),
-        ),
-        title: const Text(
-          "Cancel Appointment",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          "Are you sure you want to cancel this booking?",
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("No, Keep it", style: TextStyle(color: Colors.grey)),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF4B5C).withOpacity(0.1),
-                foregroundColor: const Color(0xFFFF4B5C),
-                elevation: 0,
-                side: const BorderSide(color: Color(0xFFFF4B5C)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes, Cancel", style: TextStyle(fontWeight: FontWeight.bold)),
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: Colors.white10),
             ),
+            title: const Text(
+              "Cancel Appointment",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              "Are you sure you want to cancel this booking?",
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  "No, Keep it",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF4B5C).withOpacity(0.1),
+                    foregroundColor: const Color(0xFFFF4B5C),
+                    elevation: 0,
+                    side: const BorderSide(color: Color(0xFFFF4B5C)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    "Yes, Cancel",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false; // نرجع false لو اليوزر قفل الـ Dialog من غير ما يختار
+        ) ??
+        false;
   }
+
   Widget _quickAccessCard({
     required IconData icon,
     required String title,
@@ -769,28 +801,24 @@ class _PatientHomeState extends State<PatientHome> {
               _handleBooking();
               break;
             case 1:
-              Navigator.push(
+              Navigator.of(
                 context,
-                MaterialPageRoute(builder: (_) => PatientRecord()),
-              );
+              ).push(MaterialPageRoute(builder: (context) => PatientRecord()));
               break;
             case 2:
-              Navigator.push(
+              Navigator.of(
                 context,
-                MaterialPageRoute(builder: (_) => RiskScore()),
-              );
+              ).push(MaterialPageRoute(builder: (context) => RiskScore()));
               break;
             case 3:
-              Navigator.push(
+              Navigator.of(
                 context,
-                MaterialPageRoute(builder: (_) => HabitTracker()),
-              );
+              ).push(MaterialPageRoute(builder: (context) => HabitTracker()));
               break;
             case 4:
-              Navigator.push(
-                context,
+              Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => PatientTreatmentPage(
+                  builder: (context) => PatientTreatmentPage(
                     patientUid: FirebaseAuth.instance.currentUser?.uid,
                   ),
                 ),

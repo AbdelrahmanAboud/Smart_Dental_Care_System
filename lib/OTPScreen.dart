@@ -137,7 +137,7 @@ class _OTPScreenState extends State<OTPScreen> {
                       "Verify & Register",
                       style: TextStyle(color: Colors.white),
                     ),
-           ),
+                  ),
           ],
         ),
       ),

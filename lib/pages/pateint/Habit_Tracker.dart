@@ -209,7 +209,6 @@ class _HabitTrackerState extends State<HabitTracker> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-            
             children: [
               Row(
                 children: [

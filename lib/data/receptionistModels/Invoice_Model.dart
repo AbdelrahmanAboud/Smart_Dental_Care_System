@@ -1,8 +1,8 @@
 class InvoiceModel {
   final String patientName;
-  final String patientId; // <--- أضف هذا السطر
+  final String patientId;
   final String invoiceId;
-  final List<String> services;
+  final List<Map<String, dynamic>> services;
   final double totalAmount;
   final String status;
   final String date;
@@ -10,7 +10,7 @@ class InvoiceModel {
 
   InvoiceModel({
     required this.patientName,
-    required this.patientId, // <--- أضف هذا السطر
+    required this.patientId,
     required this.invoiceId,
     required this.services,
     required this.totalAmount,

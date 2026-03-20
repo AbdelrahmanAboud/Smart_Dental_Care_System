@@ -5,8 +5,7 @@ class DentalRecord {
   final String notes;
   final String status;
   final String? attachmentUrl;
-  final String status; 
-  final String? attachmentUrl; 
+  
 
   DentalRecord({
     required this.date,
